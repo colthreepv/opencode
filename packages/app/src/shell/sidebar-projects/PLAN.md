@@ -31,6 +31,9 @@ Sessions with inbox status `ready` (seen) appear only in the ProjectTree.
 5. `packages/ui/src/typography/text-shimmer/text-shimmer.css` — the inherited `--text-shimmer-color` hook lets the
    Dock use an info-blue shimmer without `!important`.
 6. `shell/titlebar/inbox.tsx` — temporary use of that colour hook; drop this change when rebasing past upstream #61445.
+7. `desktop/src/main/service/background-service.ts`, `cli-version.ts` and `cli-version.test.ts` — safe dev-channel
+   service discovery/version behavior; `gui-plugins/src/updater/main.ts` disables the dev updater.
+8. `desktop/script/fork-build.ps1` — Windows fork packaging helper. Package version changes identify this fork.
 
 The sidebar feature otherwise lives in `shell/sidebar-projects/`.
 
@@ -55,30 +58,34 @@ The sidebar feature otherwise lives in `shell/sidebar-projects/`.
 - `expanded: Record<projectKey, true>`, `shown: Record<projectKey, number>` (Show more)
 - `dock: { height?: number; attentionCollapsed: boolean }`
 
+The sidebar waits for persisted state hydration before mounting mutating controls. Dock dragging previews locally;
+only a completed drag persists, while cancellation restores the stored value. The dock reserves the first attention
+row when possible, keeps Ongoing's heading visible, and scrolls each section independently.
+
 Projects without placement render in an implicit trailing "Ungrouped" group (its heading shows only once user
 groups exist; it is not collapsible).
 
 ## Files
 
-- `sidebar-projects.tsx` — `SidebarProjects`, wraps everything in `SidebarProjectsProvider`.
+- `sidebar-projects.tsx` — `SidebarProjects`, provider and hydration gate.
 - `state.tsx` — persisted store + actions (`createSidebarProjectsState`), `projectKey`, and the context
   `useSidebarProjects()` → `{ state, inbox }`: one store and one `createSessionInbox()` shared by tree and dock.
-- `project-tree.tsx` — `ProjectTree`, `ProjectGroup`, `ProjectRow`, `ProjectSessions` (Show more).
+- `project-tree.tsx` — `ProjectTree` and `ProjectRow`; `project-group.tsx` and `project-sessions.tsx` own groups and session lists.
 - `session-row.tsx` — `SessionRow` (status mark: ActivityRing working, warning dot approval/input, danger dot failed,
   accent dot unread done).
-- `dock.tsx` — `Dock` (Phase 4 owner).
+- `dock.tsx` — `Dock`, section sizing and resize interaction.
+- `session-move.tsx` — move confirmation; `keyboard.ts` — keyboard interaction helpers.
+- `glyph.tsx`, `glyph-picker.tsx`, `glyphs.ts` and their CSS — project glyph rendering and selection.
 - `preview.tsx` / `preview.css` — Settings > Interface preview (`SidebarProjectsPreview`), so `interface-mode.tsx`
   only gains the mode entry and one `<Match>`.
 
 ## Phases
 
 0. Fork, build, dev loop (web: `bun dev serve --port 4096` at root + `bun dev -- --port 4444` in `packages/app`). ✅
-1. Mode wiring + module skeleton + store + ProjectTree (projects, sessions, Show more, open session). ✅
-2. Groups: create / rename / delete; drag projects to reorder and between groups.
-3. Glyphs: picker (curated Lucide subset, vendored SVG, `currentColor`) + emoji; color via existing `icon.color`.
-4. Dock: Ongoing + NeedsAttention, DockHandle, 50% cap, collapse, `markViewed` on open.
-5. Session drag across projects via `session.move` (confirm `queue`/`steer` while running; same server only).
-6. Polish: keyboard nav, context menus, Windows package, rebase script.
+1. Mode wiring, tree, groups, glyphs, dock and same-server session moves implemented.
+2. Keyboard navigation, context menus and Windows packaging implemented; rebase remains a release maintenance task.
+
+Physical mouse interaction on the desktop has been confirmed working; no additional mouse changes are planned.
 
 ## Multi-server
 

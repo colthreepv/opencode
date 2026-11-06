@@ -27,7 +27,7 @@ const RANK: Partial<Record<InboxStatus, number>> = { approval: 0, input: 0, fail
 
 /**
  * Bottom region of the Projects sidebar, at most half its height: NeedsAttention (collapsible) above Ongoing (always
- * shown, the backbone). Ongoing keeps its full height while it fits; NeedsAttention takes what remains and scrolls.
+ * shown, the backbone). Reserve space for the first attention row before allocating the rest to Ongoing.
  * A stored height (DockHandle) only lowers the cap, so the Dock never grows past its content.
  */
 export function Dock() {
@@ -39,7 +39,7 @@ export function Dock() {
     root?: HTMLElement
     attention?: HTMLElement
     ongoing?: HTMLElement
-    drag?: { y: number; height: number }
+    drag?: { pointer: number; y: number; height: number; preview: number }
   }>({})
 
   const container = createHeight(() => ui.root?.parentElement ?? undefined)
@@ -70,23 +70,16 @@ export function Dock() {
   const collapsed = () => sidebar.state.store.dock.attentionCollapsed
 
   const size = createMemo(() => {
-    const attentionHeader = sections().attention.length > 0 ? HEADER : 0
-    const ongoingHeader = sections().ongoing.length > 0 ? HEADER : EMPTY
-    const min = attentionHeader + ongoingHeader
-    // Until the sidebar is measured the cap is the content itself.
-    const max = Math.max(min, container() ? Math.floor(container()! / 2) : Infinity)
-    const cap = Math.min(Math.max(sidebar.state.store.dock.height ?? Infinity, min), max)
-    const ongoing = Math.min(
-      ongoingHeader + (sections().ongoing.length > 0 ? (ongoingList() ?? 0) : 0),
-      cap - attentionHeader,
-    )
-
-    const attention = Math.min(
-      attentionHeader && attentionHeader + (collapsed() ? 0 : (attentionList() ?? 0)),
-      cap - ongoing,
-    )
-
-    return { min, max, ongoing, attention, height: ongoing + attention }
+    return dockSize({
+      container: container(),
+      height: ui.drag?.preview ?? sidebar.state.store.dock.height,
+      attention: sections().attention.length > 0,
+      attentionHeight: attentionList() ?? 0,
+      firstAttentionHeight: ui.attention?.firstElementChild?.clientHeight ?? 0,
+      collapsed: collapsed(),
+      ongoing: sections().ongoing.length > 0,
+      ongoingHeight: ongoingList() ?? 0,
+    })
   })
 
   const resize = (height: number) =>
@@ -139,17 +132,26 @@ export function Dock() {
           if (event.button !== 0) return
           event.preventDefault()
           event.currentTarget.setPointerCapture(event.pointerId)
-          setUi("drag", { y: event.clientY, height: size().height })
+          setUi("drag", { pointer: event.pointerId, y: event.clientY, height: size().height, preview: size().height })
         }}
         onPointerMove={(event) => {
           const drag = ui.drag
 
-          if (!drag) return
-          resize(drag.height - (event.clientY - drag.y))
+          if (!drag || drag.pointer !== event.pointerId) return
+          setUi("drag", "preview", drag.height - (event.clientY - drag.y))
         }}
-        onPointerUp={() => setUi("drag", undefined)}
-        onPointerCancel={() => setUi("drag", undefined)}
-        onLostPointerCapture={() => setUi("drag", undefined)}
+        onPointerUp={(event) => {
+          if (ui.drag?.pointer !== event.pointerId) return
+          const height = ui.drag.preview
+          setUi("drag", undefined)
+          resize(height)
+        }}
+        onPointerCancel={(event) => {
+          if (ui.drag?.pointer === event.pointerId) setUi("drag", undefined)
+        }}
+        onLostPointerCapture={(event) => {
+          if (ui.drag?.pointer === event.pointerId) setUi("drag", undefined)
+        }}
         onDblClick={() => sidebar.state.setDockHeight(undefined)}
         onKeyDown={(event) => {
           const height = {
@@ -219,6 +221,34 @@ export function Dock() {
       </section>
     </div>
   )
+}
+
+/** Divide the capped dock while leaving the first attention row visible when space permits. */
+export function dockSize(input: {
+  container?: number
+  height?: number
+  attention: boolean
+  attentionHeight: number
+  firstAttentionHeight: number
+  collapsed: boolean
+  ongoing: boolean
+  ongoingHeight: number
+}) {
+  const attentionHeader = input.attention ? HEADER : 0
+  const ongoingHeader = input.ongoing ? HEADER : EMPTY
+  const min = attentionHeader + ongoingHeader
+  const max = Math.max(min, input.container ? Math.floor(input.container / 2) : Infinity)
+  const cap = Math.min(Math.max(input.height ?? Infinity, min), max)
+  const reserve = input.attention && !input.collapsed ? Math.min(input.firstAttentionHeight, input.attentionHeight) : 0
+  const ongoing = Math.min(
+    ongoingHeader + (input.ongoing ? input.ongoingHeight : 0),
+    Math.max(ongoingHeader, cap - attentionHeader - reserve),
+  )
+  const attention = Math.min(
+    attentionHeader + (input.attention && !input.collapsed ? input.attentionHeight : 0),
+    cap - ongoing,
+  )
+  return { min, max, ongoing, attention, height: ongoing + attention }
 }
 
 /**
