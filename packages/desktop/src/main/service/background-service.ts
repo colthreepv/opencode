@@ -73,6 +73,8 @@ const connect = Effect.fn("BackgroundService.connect")(function* (mode: "initial
 
   const runEnsure = () =>
     ensure().catch((error) => {
+      if (CHANNEL === "dev" && !isolated) throw error
+
       if (!shouldRetryEnsure(version, error instanceof Error ? error.message : String(error))) throw error
 
       return ensure(cli.version)
@@ -82,8 +84,22 @@ const connect = Effect.fn("BackgroundService.connect")(function* (mode: "initial
   // afterwards for its side effects (terminal handoff completion), off the renderer's path.
   const early = mode === "initial" && !isolated ? yield* Effect.promise(sidecarProbe) : undefined
 
-  if (early) yield* Effect.sync(() => void runEnsure().catch(() => undefined))
-  const service = early ?? (yield* Effect.tryPromise(runEnsure))
+  // fork: ensure() may kill an unresponsive incumbent even without a required version.
+  // An existing shared registration is read-only; only start a service when none is registered.
+  const attachOnly = CHANNEL === "dev" && !isolated && (yield* fs.exists(file ?? client.fallback()))
+
+  const connectService = async () => {
+    if (!attachOnly) return runEnsure()
+
+    const service = await client.Service.discover({ file })
+
+    if (!service) throw new Error("Existing background service is unavailable; leaving it untouched")
+
+    return service
+  }
+
+  if (early && !attachOnly) yield* Effect.sync(() => void runEnsure().catch(() => undefined))
+  const service = early ?? (yield* Effect.tryPromise(connectService))
 
   if (service.auth?.type !== "basic") throw new Error("V2 CLI background service did not provide authentication")
   const url = new URL(service.url)

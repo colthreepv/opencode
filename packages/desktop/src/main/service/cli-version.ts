@@ -15,7 +15,8 @@ export function serviceVersion(input: {
 }) {
   if (input.mode === "reconnect") return undefined
 
-  if (input.channel === "beta" && !input.isolated) return undefined
+  // fork: attach to the running service, never replace it.
+  if ((input.channel === "beta" || input.channel === "dev") && !input.isolated) return undefined
 
   return input.version
 }

@@ -3,6 +3,9 @@ import { keptStages, serviceVersion, shouldRetryEnsure } from "./cli-version"
 
 describe("cli-version", () => {
   test.each([
+    { channel: "dev" as const, isolated: false, mode: "initial" as const, version: "2.2.5", expected: undefined },
+    { channel: "dev" as const, isolated: true, mode: "initial" as const, version: "2.2.5", expected: "2.2.5" },
+    { channel: "dev" as const, isolated: false, mode: "reconnect" as const, version: "2.2.5", expected: undefined },
     { channel: "beta" as const, isolated: false, mode: "initial" as const, version: "0.0.0-beta-2", expected: undefined },
     { channel: "beta" as const, isolated: true, mode: "initial" as const, version: "0.0.0-beta-2", expected: "0.0.0-beta-2" },
     { channel: "prod" as const, isolated: false, mode: "initial" as const, version: "2.0.32", expected: "2.0.32" },

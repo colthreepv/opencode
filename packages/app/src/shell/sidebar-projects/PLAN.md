@@ -81,6 +81,38 @@ groups exist; it is not collapsible).
 
 Projects of every visible server are listed (as Inbox does), so groups may mix servers. Session moves are same-server only.
 
+## Desktop build
+
+Windows x64, unsigned, alongside the official desktop:
+
+```powershell
+& "$HOME\bin\opencode-fork-build.ps1"
+# Source-controlled copy: packages/desktop/script/fork-build.ps1
+# Output: dist/desktop/app/OpenCode Dev.exe (keep the entire app directory)
+```
+
+The helper copies the installed official `resources/opencode-cli.exe` into
+`packages/cli/dist/cli-windows-x64-baseline/bin/opencode.exe`, writes its actual version to the package
+manifest, then runs desktop `build` and `pack`. It never launches the app or operates the service.
+Build dependencies must already be installed (`bun install` at the repository root).
+
+The desktop uses channel `dev`: **OpenCode Dev**, app ID/userData `ai.opencode.desktop.dev`, separate
+from the installed official app. Its displayed version is `<installed-cli-version>-sidebar`; the bundled
+CLI version stays the unmodified installed version (initially `2.2.5`). This suffix identifies the fork
+without inventing a CLI version. The dev updater is disabled, so an official dev update cannot replace it.
+
+Non-isolated dev startup/reconnect has no required service version and never does the version-forcing
+retry. When `service.json` exists, it only discovers the service, without `ensure()`'s unresponsive-service
+recovery or terminal handoff side effects. An unavailable registered service causes connection failure,
+not replacement. With no registration it may start the bundled official CLI. Both clients share the real
+service/data; client-local preferences, tabs and project selections remain separate. Open projects in this
+client as needed; choose **Settings > General > Interface mode > Projects**.
+
+If the official app advances to `2.2.6`, the fork still attaches without downgrading/restarting its service.
+Client/API incompatibility remains possible: rebase onto that release and rebuild to update renderer and
+bundled fallback CLI. If no service is registered, an old fork can start its bundled old CLI; rebuild before
+using that fallback after an official update. Do not use service stop/restart to test this build.
+
 ## Rebase on release
 
 ```
