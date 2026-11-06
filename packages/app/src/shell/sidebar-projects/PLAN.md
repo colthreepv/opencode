@@ -28,8 +28,11 @@ Sessions with inbox status `ready` (seen) appear only in the ProjectTree.
 2. `settings/general/interface-mode.tsx` — add the mode + `ProjectsPreview`.
 3. `shell/titlebar/titlebar.tsx` (~L866) — `<Show inbox>` becomes a `<Switch>` with a `projects` case.
 4. `runtime/i18n/en.ts` — `sidebar.projects.*` and `settings.general.row.interfaceMode.projects*` keys (English only).
+5. `packages/ui/src/typography/text-shimmer/text-shimmer.css` — the inherited `--text-shimmer-color` hook lets the
+   Dock use an info-blue shimmer without `!important`.
+6. `shell/titlebar/inbox.tsx` — temporary use of that colour hook; drop this change when rebasing past upstream #61445.
 
-Everything else lives in `shell/sidebar-projects/`.
+The sidebar feature otherwise lives in `shell/sidebar-projects/`.
 
 ## Reused upstream pieces
 
@@ -114,6 +117,18 @@ bundled fallback CLI. If no service is registered, an old fork can start its bun
 using that fallback after an official update. Do not use service stop/restart to test this build.
 
 ## Rebase on release
+
+### Shimmer policy (user preference)
+
+- **Keep the shimmer in the Projects Dock.** Do not replace it with upstream's quieter row styling just to reduce
+  the patch surface.
+- Upstream [#61445](https://github.com/anomalyco/opencode/pull/61445) replaces the Inbox row's Working shimmer with
+  an activity ring and elapsed time. When rebasing onto a release containing it, accept upstream's Inbox row and
+  drop our temporary `inbox.tsx` colour override/comment. No need to restore that row's old markup.
+- Keep the `--text-shimmer-color` hook in `text-shimmer.css` and its use in `sidebar-projects/dock.tsx`, unless
+  upstream provides an equivalent overridable hook. No `!important`.
+- At upstream `3ec9b3b0a6936ac38360004870024028c1cc0c71`, the collapsed Working section heading still uses
+  `TextShimmer`; only its individual working rows lost the shimmer.
 
 ```
 git fetch upstream --tags
