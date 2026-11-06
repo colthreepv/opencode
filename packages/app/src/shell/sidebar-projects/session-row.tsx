@@ -3,6 +3,8 @@ import { ActivityRing } from "@opencode/ui/activity-ring"
 import { useLanguage } from "@/runtime/i18n/language"
 import type { InboxEntry } from "@/shell/titlebar/inbox-model"
 import { sessionTabTitle } from "@/shell/titlebar/tab-title"
+import { useDraggable } from "@dnd-kit/solid"
+import { projectKey } from "./state"
 
 /**
  * A root session under its project. The trailing mark follows the session tabs: a ring while working, a warning dot
@@ -10,6 +12,24 @@ import { sessionTabTitle } from "@/shell/titlebar/tab-title"
  */
 export function SessionRow(props: { entry: InboxEntry; selected: boolean; onOpen: () => void }) {
   const language = useLanguage()
+
+  const draggable = useDraggable({
+    get id() {
+      return props.entry.key
+    },
+    type: "session",
+    get data() {
+      return {
+        entry: props.entry,
+        server: props.entry.server,
+        projectKey: projectKey(
+          props.entry.server,
+          props.entry.ctx.projects.forSession(props.entry.session)?.worktree ?? props.entry.session.location.directory,
+        ),
+      }
+    },
+  })
+
   const status = () => props.entry.status
   const unread = () => status() !== "ready" && status() !== "working"
 
@@ -21,6 +41,7 @@ export function SessionRow(props: { entry: InboxEntry; selected: boolean; onOpen
 
   return (
     <button
+      ref={draggable.ref}
       type="button"
       role="treeitem"
       data-slot="sidebar-projects-session"

@@ -1,6 +1,16 @@
 import { DESKTOP_NATIVE_ENGLISH } from "./desktop-native"
 
 export const dict = {
+  "sidebar.projects.group.create": "Create group",
+  "sidebar.projects.group.name": "Group name",
+  "sidebar.projects.group.rename": "Rename group",
+  "sidebar.projects.group.delete": "Delete group",
+  "sidebar.projects.group.deleteConfirm": "Delete “{{name}}”? Its projects will return to Ungrouped.",
+  "sidebar.projects.group.moveTo": "Move to group",
+  "sidebar.projects.move.title": "Move working session?",
+  "sidebar.projects.move.description": "Move after the current step, or steer the session to the new project now. Reverting earlier steps may not work because snapshots belong to the old project.",
+  "sidebar.projects.move.queue": "Move after the current step (queue)",
+  "sidebar.projects.move.steer": "Move now (steer)",
   "experiment.voiceCalls": "Voice calls",
   "voice.call": "Call",
   "voice.mute": "Mute",

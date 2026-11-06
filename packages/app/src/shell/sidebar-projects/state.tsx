@@ -107,15 +107,15 @@ export function createSidebarProjectsState() {
       )
     },
     /** Places a project at `index` within a group; an undefined group returns it to Ungrouped. */
-    moveProject(key: string, group: string | undefined, index: number) {
-      const order = group === undefined ? [] : members(group).filter((item) => item !== key)
+    moveProject(key: string, group: string | undefined, index: number, ungrouped: string[] = []) {
+      const order = (group === undefined ? ungrouped : members(group)).filter((item) => item !== key)
 
-      if (group !== undefined) order.splice(Math.max(0, Math.min(index, order.length)), 0, key)
+      order.splice(Math.max(0, Math.min(index, order.length)), 0, key)
       setStore(
         produce((draft) => {
           delete draft.placement[key]
           order.forEach((item, position) => {
-            if (group !== undefined) draft.placement[item] = { group, order: position }
+            draft.placement[item] = { group: group ?? "", order: position }
           })
         }),
       )
