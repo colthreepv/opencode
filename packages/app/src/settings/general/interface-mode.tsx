@@ -1,12 +1,14 @@
 import { For, Match, Show, Switch, createUniqueId } from "solid-js"
 import { useLanguage } from "@/runtime/i18n/language"
 import { type TabLayout, useSettings } from "@/settings/model"
+import { SidebarProjectsPreview } from "@/shell/sidebar-projects/preview"
 import "./interface-mode.css"
 
 const modes = [
   { id: "top", layout: "horizontal" },
   { id: "side", layout: "vertical" },
   { id: "inbox", layout: "inbox" },
+  { id: "projects", layout: "projects" },
 ] as const satisfies { id: string; layout: TabLayout }[]
 
 export function InterfaceModeSetting() {
@@ -43,13 +45,18 @@ export function InterfaceModeSetting() {
                 <Match when={mode.id === "inbox"}>
                   <InboxPreview />
                 </Match>
+                <Match when={mode.id === "projects"}>
+                  <SidebarProjectsPreview>
+                    <PreviewWorkspace />
+                  </SidebarProjectsPreview>
+                </Match>
               </Switch>
             </div>
             <div data-slot="interface-mode-copy">
               <span data-slot="interface-mode-title">
                 <span data-slot="interface-mode-radio" />
                 <span id={`${id}-${mode.id}-title`}>{language.t(`settings.general.row.interfaceMode.${mode.id}`)}</span>
-                <Show when={mode.id === "inbox"}>
+                <Show when={mode.id === "inbox" || mode.id === "projects"}>
                   <span data-slot="interface-mode-badge">
                     {language.t("settings.general.row.interfaceMode.experimental")}
                   </span>

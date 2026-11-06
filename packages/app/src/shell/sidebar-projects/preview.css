@@ -1,0 +1,31 @@
+/* Extends the shared Settings > Interface preview (settings/general/interface-mode.css). */
+[data-slot="interface-mode-preview"] [data-slot="preview-rail"][data-variant="projects"] {
+  gap: 0;
+  padding-bottom: 4px;
+
+  [data-slot="preview-tree"] {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+  }
+
+  [data-slot="preview-tab"][data-indent] {
+    padding-inline-start: 9px;
+
+    i {
+      display: none;
+    }
+  }
+
+  [data-slot="preview-dock"] {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-inline: -4px;
+    padding: 3px 4px 0;
+    border-top: 0.5px solid var(--v2-border-border-base);
+  }
+}

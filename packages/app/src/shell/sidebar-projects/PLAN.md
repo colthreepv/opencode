@@ -45,17 +45,32 @@ Everything else lives in `shell/sidebar-projects/`.
 ## Client state — `Persist.global("sidebar-projects")`
 
 - `groups: { id, name, collapsed }[]` (ordered)
-- `placement: Record<projectKey, { group: string; order: number }>` — `projectKey = server \0 projectID`
+- `placement: Record<projectKey, { group: string; order: number }>` — `projectKey = server \0 pathKey(worktree)`
+  (`projectKey()` in `state.tsx`). Not the project ID: one path can carry several IDs over time, and projects
+  without a root commit all share the `global` ID.
 - `glyphs: Record<projectKey, { kind: "icon"; name: string } | { kind: "emoji"; value: string }>`
 - `expanded: Record<projectKey, true>`, `shown: Record<projectKey, number>` (Show more)
 - `dock: { height?: number; attentionCollapsed: boolean }`
 
-Projects without placement render in an implicit trailing "Ungrouped" group.
+Projects without placement render in an implicit trailing "Ungrouped" group (its heading shows only once user
+groups exist; it is not collapsible).
+
+## Files
+
+- `sidebar-projects.tsx` — `SidebarProjects`, wraps everything in `SidebarProjectsProvider`.
+- `state.tsx` — persisted store + actions (`createSidebarProjectsState`), `projectKey`, and the context
+  `useSidebarProjects()` → `{ state, inbox }`: one store and one `createSessionInbox()` shared by tree and dock.
+- `project-tree.tsx` — `ProjectTree`, `ProjectGroup`, `ProjectRow`, `ProjectSessions` (Show more).
+- `session-row.tsx` — `SessionRow` (status mark: ActivityRing working, warning dot approval/input, danger dot failed,
+  accent dot unread done).
+- `dock.tsx` — `Dock` (Phase 4 owner).
+- `preview.tsx` / `preview.css` — Settings > Interface preview (`SidebarProjectsPreview`), so `interface-mode.tsx`
+  only gains the mode entry and one `<Match>`.
 
 ## Phases
 
 0. Fork, build, dev loop (web: `bun dev serve --port 4096` at root + `bun dev -- --port 4444` in `packages/app`). ✅
-1. Mode wiring + module skeleton + store + ProjectTree (projects, sessions, Show more, open session).
+1. Mode wiring + module skeleton + store + ProjectTree (projects, sessions, Show more, open session). ✅
 2. Groups: create / rename / delete; drag projects to reorder and between groups.
 3. Glyphs: picker (curated Lucide subset, vendored SVG, `currentColor`) + emoji; color via existing `icon.color`.
 4. Dock: Ongoing + NeedsAttention, DockHandle, 50% cap, collapse, `markViewed` on open.

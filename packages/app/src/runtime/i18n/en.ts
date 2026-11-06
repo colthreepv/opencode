@@ -779,6 +779,11 @@ export const dict = {
   "sidebar.inbox.elapsed.days.one": "{{count}}d",
   "sidebar.inbox.elapsed.days.other": "{{count}}d",
   "sidebar.inbox.time.now": "now",
+  "sidebar.projects.label": "Projects",
+  "sidebar.projects.empty": "Projects you open will appear here",
+  "sidebar.projects.ungrouped": "Ungrouped",
+  "sidebar.projects.noSessions": "No sessions yet",
+  "sidebar.projects.showMore": "Show more",
   "sidebar.project.recentSessions": "Recent sessions",
   "sidebar.project.clearNotifications": "Clear notifications",
 
@@ -870,6 +875,9 @@ export const dict = {
   "settings.general.row.interfaceMode.inbox": "Inbox",
   "settings.general.row.interfaceMode.inbox.description":
     "Every session across your servers, sorted by what needs you next.",
+  "settings.general.row.interfaceMode.projects": "Projects",
+  "settings.general.row.interfaceMode.projects.description":
+    "Your projects in groups, with live sessions docked below.",
   "settings.general.row.interfaceMode.experimental": "Experimental",
   "settings.appearance.row.zoom.title": "Zoom",
   "settings.appearance.row.zoom.description": "Make text and controls larger across the app",
