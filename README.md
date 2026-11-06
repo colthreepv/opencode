@@ -11,6 +11,8 @@ Independent project; not built by or affiliated with the OpenCode team.
 
 - **Project groups:** create, rename and reorder groups; drag projects within or between them.
 - **Project icons:** choose a coloured monochrome icon or an emoji.
+- **Project actions:** edit the display name, icon and colour; start a session with `+`, or hide a project from the sidebar
+  and restore it from **Groups → Hidden projects**. Hiding never deletes its files or conversations.
 - **Nested conversations:** five sessions per project, with **Show more** for older sessions.
 - **Session moves:** drag a conversation to another project on the same server; running sessions offer queue or steer.
 - **Bottom Dock:** collapsible **Needs attention** for approvals, questions, failures and unread results; permanent

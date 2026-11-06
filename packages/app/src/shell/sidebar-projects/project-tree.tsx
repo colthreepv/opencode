@@ -18,10 +18,12 @@ import { AutoScroller, Feedback, PointerActivationConstraints } from "@dnd-kit/d
 import { RestrictToVerticalAxis } from "@dnd-kit/abstract/modifiers"
 import { RestrictToElement } from "@dnd-kit/dom/modifiers"
 import { ContextMenu } from "@opencode/ui/context-menu"
+import { Menu } from "@opencode/ui/menu"
 import { createStore } from "solid-js/store"
 import { createSessionMove } from "./session-move"
 import { ProjectSessions } from "./project-sessions"
 import { openContextMenuFromKeyboard } from "./keyboard"
+import { useTabs } from "@/shell/tabs/tabs"
 
 /** Projects of every visible server, grouped as the user arranged them, each expandable to its root sessions. */
 export function ProjectTree() {
@@ -33,7 +35,7 @@ export function ProjectTree() {
   const moveSession = createSessionMove()
   let tree!: HTMLDivElement
 
-  const projects = createMemo(() =>
+  const knownProjects = createMemo(() =>
     servers.visible.flatMap((conn) => {
       const ctx = global.ensureServerCtx(conn)
       const server = ServerConnection.key(conn)
@@ -52,6 +54,9 @@ export function ProjectTree() {
       ].map(([key, project]) => ({ key, server, project }))
     }),
   )
+
+  const projects = createMemo(() => knownProjects().filter((item) => !sidebar.state.store.hidden[item.key]))
+  const hiddenProjects = createMemo(() => knownProjects().filter((item) => sidebar.state.store.hidden[item.key]))
 
   const byKey = createMemo(() => new Map(projects().map((item) => [item.key, item])))
 
@@ -177,12 +182,37 @@ export function ProjectTree() {
         aria-label={language.t("sidebar.projects.label")}
         class="flex min-h-0 flex-1 flex-col gap-px overflow-y-auto pb-1"
       >
-        <div class="flex h-8 shrink-0 items-center px-1.5 text-[12px] font-medium text-v2-text-text-faint">
-          <span class="flex-1">{language.t("sidebar.projects.label")}</span>
+        <div class="mb-1 flex h-8 shrink-0 items-center border-b border-v2-border-border-muted px-1.5 text-[12px] font-medium text-v2-text-text-faint">
+          <span class="flex-1">{language.t("sidebar.projects.groups")}</span>
+          <Show when={hiddenProjects().length > 0}>
+            <Menu gutter={4} modal={false} placement="bottom-end">
+              <Menu.Trigger
+                as="button"
+                type="button"
+                aria-label={language.t("sidebar.projects.hidden")}
+                title={language.t("sidebar.projects.hidden")}
+                class="flex size-6 items-center justify-center rounded hover:bg-v2-overlay-simple-overlay-hover"
+              >
+                <Icon name="eye" size="small" />
+              </Menu.Trigger>
+              <Menu.Portal>
+                <Menu.Content>
+                  <For each={hiddenProjects()}>
+                    {(item) => (
+                      <Menu.Item onSelect={() => sidebar.state.showProject(item.key)}>
+                        {language.t("sidebar.projects.showProject", { name: displayName(item.project) })}
+                      </Menu.Item>
+                    )}
+                  </For>
+                </Menu.Content>
+              </Menu.Portal>
+            </Menu>
+          </Show>
           <button
             type="button"
             data-no-dnd
             aria-label={language.t("sidebar.projects.group.create")}
+            title={language.t("sidebar.projects.group.create")}
             class="flex size-6 items-center justify-center rounded hover:bg-v2-overlay-simple-overlay-hover"
             onClick={() => setStore("creating", true)}
           >
@@ -215,6 +245,7 @@ export function ProjectTree() {
                   name={group().name}
                   headed={headed()}
                   collapsed={group().collapsed}
+                  empty={group().projects.length === 0}
                 >
                   <For each={group().projects}>
                     {(key) => (
@@ -265,6 +296,7 @@ function ProjectRow(props: {
   const servers = useServers()
   const language = useLanguage()
   const sidebar = useSidebarProjects()
+  const tabs = useTabs()
   const operation = useDragOperation()
 
   const sortable = useSortable({
@@ -317,8 +349,8 @@ function ProjectRow(props: {
           }}
         >
           <ProjectGlyph project={props.project} projectKey={props.projectKey} />
-          {/* The hover edit button overlays the row end, so the name truncates before it instead of under it. */}
-          <bdi class="min-w-0 flex-1 truncate font-medium group-hover/project-container:pe-6 group-focus-within/project-container:pe-6">
+          {/* Leave room for the sibling action buttons without nesting buttons inside the row trigger. */}
+          <bdi class="min-w-0 flex-1 truncate font-medium group-hover/project-container:pe-14 group-focus-within/project-container:pe-14 [@media(hover:none)]:pe-14">
             {displayName(props.project)}
           </bdi>
           <Icon
@@ -330,7 +362,15 @@ function ProjectRow(props: {
         </ContextMenu.Trigger>
         <ContextMenu.Portal>
           <ContextMenu.Content>
-            <ContextMenu.Item onSelect={openGlyph}>{language.t("sidebar.projects.glyph.title")}</ContextMenu.Item>
+            <ContextMenu.Item
+              onSelect={() => void tabs.newDraft({ server: props.server, directory: props.project.worktree }, "")}
+            >
+              {language.t("command.session.new")}
+            </ContextMenu.Item>
+            <ContextMenu.Item onSelect={openGlyph}>{language.t("common.edit")}</ContextMenu.Item>
+            <ContextMenu.Item onSelect={() => sidebar.state.hideProject(props.projectKey)}>
+              {language.t("sidebar.projects.hideProject")}
+            </ContextMenu.Item>
             <ContextMenu.Sub>
               <ContextMenu.SubTrigger>{language.t("sidebar.projects.group.moveTo")}</ContextMenu.SubTrigger>
               <ContextMenu.Portal>
@@ -355,16 +395,28 @@ function ProjectRow(props: {
           </ContextMenu.Content>
         </ContextMenu.Portal>
       </ContextMenu>
-      <button
-        type="button"
-        data-no-dnd
-        aria-label={language.t("sidebar.projects.glyph.title")}
-        title={language.t("sidebar.projects.glyph.title")}
-        class="absolute end-7 top-1 flex size-6 items-center justify-center rounded-[6px] text-v2-icon-icon-muted opacity-0 hover:bg-v2-overlay-simple-overlay-hover hover:text-v2-icon-icon-base group-hover/project-container:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:bg-v2-overlay-simple-overlay-hover"
-        onClick={openGlyph}
-      >
-        <Icon name="edit" size="small" />
-      </button>
+      <div class="absolute end-7 top-1 flex items-center gap-1 opacity-0 group-hover/project-container:opacity-100 group-focus-within/project-container:opacity-100 [@media(hover:none)]:opacity-100">
+        <button
+          type="button"
+          data-no-dnd
+          aria-label={language.t("dialog.project.edit.title")}
+          title={language.t("dialog.project.edit.title")}
+          class="flex size-6 items-center justify-center rounded-[6px] text-v2-icon-icon-muted hover:bg-v2-overlay-simple-overlay-hover hover:text-v2-icon-icon-base focus-visible:outline-none focus-visible:bg-v2-overlay-simple-overlay-hover"
+          onClick={openGlyph}
+        >
+          <Icon name="sliders" size="small" />
+        </button>
+        <button
+          type="button"
+          data-no-dnd
+          aria-label={language.t("command.session.new")}
+          title={language.t("command.session.new")}
+          class="flex size-6 items-center justify-center rounded-[6px] text-v2-icon-icon-muted hover:bg-v2-overlay-simple-overlay-hover hover:text-v2-icon-icon-base focus-visible:outline-none focus-visible:bg-v2-overlay-simple-overlay-hover"
+          onClick={() => void tabs.newDraft({ server: props.server, directory: props.project.worktree }, "")}
+        >
+          <Icon name="plus" size="small" />
+        </button>
+      </div>
       <Show when={props.expanded}>
         <div role="group" class="flex flex-col gap-px pb-1">
           {props.children}

@@ -20,6 +20,10 @@
   gap: 8px;
 }
 
+.glyph-picker-name {
+  width: 100%;
+}
+
 /* Six rows of 32px cells, then the grid scrolls. */
 .glyph-picker-grid {
   display: grid;

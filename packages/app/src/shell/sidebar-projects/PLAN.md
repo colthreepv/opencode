@@ -56,6 +56,8 @@ The sidebar feature otherwise lives in `shell/sidebar-projects/`.
   without a root commit all share the `global` ID.
 - `glyphs: Record<projectKey, { kind: "icon"; name: string } | { kind: "emoji"; value: string }>`
 - `expanded: Record<projectKey, true>`, `shown: Record<projectKey, number>` (Show more)
+- `hidden: Record<projectKey, true>` — explicit sidebar-only hiding; Groups' Hidden projects menu restores entries.
+  Unlike upstream's used-project hide, this also filters projects discovered from inbox sessions. Dock activity stays visible.
 - `dock: { height?: number; attentionCollapsed: boolean }`
 
 The sidebar waits for persisted state hydration before mounting mutating controls. Dock dragging previews locally;

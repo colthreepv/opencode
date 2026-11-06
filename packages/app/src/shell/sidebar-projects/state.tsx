@@ -29,6 +29,7 @@ const SidebarProjectsState = Persistence.struct({
   placement: Persistence.record(Persistence.struct({ group: Schema.String, order: Schema.Finite })),
   glyphs: Persistence.record(Glyph),
   expanded: Persistence.record(Schema.Literal(true)),
+  hidden: Persistence.record(Schema.Literal(true)),
   shown: Persistence.record(Schema.Finite),
   dock: Persistence.struct({
     height: Persistence.optional(Schema.Finite),
@@ -51,6 +52,7 @@ export function createSidebarProjectsState() {
     placement: {},
     glyphs: {},
     expanded: {},
+    hidden: {},
     shown: {},
     dock: { attentionCollapsed: false },
   })
@@ -165,6 +167,16 @@ export function createSidebarProjectsState() {
     },
     setDockHeight(height: number | undefined) {
       setStore("dock", "height", height)
+    },
+    hideProject(key: string) {
+      setStore("hidden", key, true)
+    },
+    showProject(key: string) {
+      setStore(
+        produce((draft) => {
+          delete draft.hidden[key]
+        }),
+      )
     },
     toggleAttention() {
       setStore("dock", "attentionCollapsed", !store.dock.attentionCollapsed)

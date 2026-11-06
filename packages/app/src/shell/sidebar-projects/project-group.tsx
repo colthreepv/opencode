@@ -50,6 +50,7 @@ export function ProjectGroup(props: {
   name: string
   headed: boolean
   collapsed: boolean
+  empty: boolean
   children: JSX.Element
 }) {
   const sidebar = useSidebarProjects()
@@ -122,7 +123,7 @@ export function ProjectGroup(props: {
                 ref={sortable.handleRef}
                 data-slot="sidebar-projects-group-header"
                 aria-expanded={!props.collapsed}
-                class="mt-3 flex h-7 w-full items-center gap-1 rounded-[6px] px-1.5 text-start text-[12px] leading-4 font-semibold text-v2-text-text-muted hover:bg-v2-overlay-simple-overlay-hover focus-visible:outline-none focus-visible:bg-v2-overlay-simple-overlay-hover"
+                class="flex h-7 w-full items-center gap-1 rounded-[6px] px-1.5 text-start text-[12px] leading-4 font-semibold text-v2-text-text-muted hover:bg-v2-overlay-simple-overlay-hover focus-visible:outline-none focus-visible:bg-v2-overlay-simple-overlay-hover"
                 onClick={() => {
                   if (props.id !== UNGROUPED) sidebar.state.toggleGroup(props.id)
                 }}
@@ -165,7 +166,16 @@ export function ProjectGroup(props: {
           class="flex min-h-5 flex-col gap-px rounded"
           classList={{ "bg-v2-overlay-simple-overlay-hover": body.isDropTarget() }}
         >
-          {props.children}
+          <Show
+            when={!props.empty}
+            fallback={
+              <div class="flex h-6 items-center px-1.5 text-[12px] leading-4 text-v2-text-text-faint">
+                {language.t("sidebar.projects.group.empty")}
+              </div>
+            }
+          >
+            {props.children}
+          </Show>
         </div>
       </Show>
     </div>

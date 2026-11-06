@@ -80,13 +80,32 @@ export function GlyphPicker(props: { project: LocalProject; server: ServerConnec
   return (
     <Dialog fit>
       <DialogHeader>
-        <DialogTitle>{language.t("sidebar.projects.glyph.title")}</DialogTitle>
+        <DialogTitle>{language.t("dialog.project.edit.title")}</DialogTitle>
       </DialogHeader>
       <DialogBody class="glyph-picker">
         <div class="glyph-picker-preview">
           <ProjectGlyph project={props.project} projectKey={props.projectKey} color={model.store.color} />
-          <bdi class="min-w-0 truncate">{displayName(props.project)}</bdi>
+          <bdi class="min-w-0 truncate">{model.store.name || displayName(props.project)}</bdi>
         </div>
+        <label class="glyph-picker-field">
+          <span class="glyph-picker-label">{language.t("project.settings.name.title")}</span>
+          <TextInput
+            type="text"
+            appearance="base"
+            class="glyph-picker-name"
+            dir="auto"
+            value={model.store.name}
+            placeholder={model.folderName()}
+            aria-label={language.t("project.settings.name.title")}
+            onInput={(event) => model.setStore("name", event.currentTarget.value)}
+            onBlur={model.saveName}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter" || event.isComposing) return
+              event.preventDefault()
+              event.currentTarget.blur()
+            }}
+          />
+        </label>
         <div class="glyph-picker-field">
           <TextInput
             type="search"
