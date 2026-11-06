@@ -11,7 +11,8 @@ import { SessionTabAvatarView } from "@/shell/layout/session-tab-avatar"
 import { inboxArchived, type InboxEntry, type InboxStatus } from "@/shell/titlebar/inbox-model"
 import { compareWorking, workingSince } from "@/shell/titlebar/inbox-working"
 import { sessionTabTitle } from "@/shell/titlebar/tab-title"
-import { useSidebarProjects } from "./state"
+import { ProjectGlyph } from "./glyph"
+import { projectKey, useSidebarProjects } from "./state"
 
 /** Section header height: matches the `h-7` on `DockSectionHeader`. */
 const HEADER = 28
@@ -310,11 +311,20 @@ function DockRow(props: {
       >
         <span class="flex h-4 w-full min-w-0 items-center gap-1.5 text-[12px] leading-4 text-v2-text-text-faint">
           <span class="flex size-4 shrink-0 items-center justify-center">
-            <SessionTabAvatarView
-              project={project()}
-              directory={props.entry.session.location.directory}
-              unread={false}
-            />
+            <Show
+              when={project()}
+              fallback={
+                <SessionTabAvatarView
+                  project={undefined}
+                  directory={props.entry.session.location.directory}
+                  unread={false}
+                />
+              }
+            >
+              {(value) => (
+                <ProjectGlyph project={value()} projectKey={projectKey(props.entry.server, value().worktree)} />
+              )}
+            </Show>
           </span>
           <bdi class="min-w-0 truncate">
             {displayName(project() ?? { worktree: props.entry.session.location.directory })}
@@ -344,7 +354,7 @@ function DockRow(props: {
               {/* Keep the status colour under the sweep. */}
               <span
                 aria-hidden="true"
-                class="text-v2-state-fg-info [&_[data-component=text-shimmer]]:[--text-shimmer-base-color:var(--v2-state-fg-info)]"
+                class="text-v2-state-fg-info [&_[data-component=text-shimmer]]:[--text-shimmer-base-color:var(--v2-state-fg-info)]!"
               >
                 <TextShimmer text={working()} active />
               </span>
@@ -363,11 +373,11 @@ function DockRow(props: {
         </span>
       </button>
       <Show when={status() === "approval"}>
-        <div data-slot="sidebar-projects-dock-decide" class="flex items-center justify-end gap-1 px-1.5 pb-1.5">
-          <Button variant="ghost" size="small" onClick={() => props.onDecide("reject")}>
+        <div data-slot="sidebar-projects-dock-decide" class="flex items-center justify-end gap-1 px-1.5 pb-1">
+          <Button variant="ghost-muted" size="small" onClick={() => props.onDecide("reject")}>
             {language.t("ui.permission.deny")}
           </Button>
-          <Button variant="submit" size="small" onClick={() => props.onDecide("once")}>
+          <Button variant="neutral" size="small" onClick={() => props.onDecide("once")}>
             {language.t("ui.permission.allowOnce")}
           </Button>
         </div>
