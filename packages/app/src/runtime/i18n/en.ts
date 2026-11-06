@@ -796,6 +796,7 @@ export const dict = {
   "sidebar.projects.showMore": "Show more",
   "sidebar.projects.dock.label": "Live sessions",
   "sidebar.projects.dock.ongoing": "Ongoing",
+  "sidebar.projects.dock.idle": "Nothing running",
   "sidebar.projects.dock.resize": "Resize live sessions",
   "sidebar.projects.glyph.title": "Change icon…",
   "sidebar.projects.glyph.search": "Search icons",

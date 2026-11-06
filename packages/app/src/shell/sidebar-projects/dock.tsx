@@ -1,5 +1,4 @@
-import { createElementSize } from "@solid-primitives/resize-observer"
-import { createEffect, createMemo, For, Show, type JSX } from "solid-js"
+import { createEffect, createMemo, createSignal, For, onCleanup, Show, type JSX } from "solid-js"
 import { createStore } from "solid-js/store"
 import { ActivityRing } from "@opencode/ui/activity-ring"
 import { Button } from "@opencode/ui/button"
@@ -16,6 +15,9 @@ import { projectKey, useSidebarProjects } from "./state"
 
 /** Section header height: matches the `h-7` on `DockSectionHeader`. */
 const HEADER = 28
+
+/** Placeholder height of an empty Ongoing: matches its `h-6`. */
+const EMPTY = 24
 
 /** Keyboard resize step of the DockHandle. */
 const STEP = 16
@@ -40,9 +42,9 @@ export function Dock() {
     drag?: { y: number; height: number }
   }>({})
 
-  const container = createElementSize(() => ui.root?.parentElement)
-  const attentionList = createElementSize(() => ui.attention)
-  const ongoingList = createElementSize(() => ui.ongoing)
+  const container = createHeight(() => ui.root?.parentElement ?? undefined)
+  const attentionList = createHeight(() => ui.attention)
+  const ongoingList = createHeight(() => ui.ongoing)
 
   const sections = createMemo(() => {
     const list = inbox.entries().filter((entry) => !inboxArchived(entry))
@@ -69,15 +71,18 @@ export function Dock() {
 
   const size = createMemo(() => {
     const attentionHeader = sections().attention.length > 0 ? HEADER : 0
-    const ongoingHeader = sections().ongoing.length > 0 ? HEADER : 0
+    const ongoingHeader = sections().ongoing.length > 0 ? HEADER : EMPTY
     const min = attentionHeader + ongoingHeader
     // Until the sidebar is measured the cap is the content itself.
-    const max = Math.max(min, container.height ? Math.floor(container.height / 2) : Infinity)
+    const max = Math.max(min, container() ? Math.floor(container()! / 2) : Infinity)
     const cap = Math.min(Math.max(sidebar.state.store.dock.height ?? Infinity, min), max)
-    const ongoing = Math.min(ongoingHeader && ongoingHeader + (ongoingList.height ?? 0), cap - attentionHeader)
+    const ongoing = Math.min(
+      ongoingHeader + (sections().ongoing.length > 0 ? (ongoingList() ?? 0) : 0),
+      cap - attentionHeader,
+    )
 
     const attention = Math.min(
-      attentionHeader && attentionHeader + (collapsed() ? 0 : (attentionList.height ?? 0)),
+      attentionHeader && attentionHeader + (collapsed() ? 0 : (attentionList() ?? 0)),
       cap - ongoing,
     )
 
@@ -112,100 +117,137 @@ export function Dock() {
   )
 
   return (
-    <Show when={sections().attention.length > 0 || sections().ongoing.length > 0}>
+    <div
+      ref={(el) => setUi("root", el)}
+      data-slot="sidebar-projects-dock"
+      role="region"
+      aria-label={language.t("sidebar.projects.dock.label")}
+      class="relative flex shrink-0 flex-col border-t border-v2-border-border-muted"
+    >
       <div
-        ref={(el) => setUi("root", el)}
-        data-slot="sidebar-projects-dock"
-        role="region"
-        aria-label={language.t("sidebar.projects.dock.label")}
-        class="relative flex shrink-0 flex-col border-t border-v2-border-border-muted"
+        data-slot="sidebar-projects-dock-handle"
+        role="separator"
+        tabIndex={0}
+        aria-orientation="horizontal"
+        aria-label={language.t("sidebar.projects.dock.resize")}
+        aria-valuenow={Math.round(size().height)}
+        aria-valuemin={size().min}
+        aria-valuemax={Number.isFinite(size().max) ? size().max : undefined}
+        data-state={ui.drag ? "dragging" : undefined}
+        class="group/handle absolute inset-x-0 -top-[4px] z-10 flex h-[7px] cursor-row-resize touch-none items-center focus-visible:outline-none"
+        onPointerDown={(event) => {
+          if (event.button !== 0) return
+          event.preventDefault()
+          event.currentTarget.setPointerCapture(event.pointerId)
+          setUi("drag", { y: event.clientY, height: size().height })
+        }}
+        onPointerMove={(event) => {
+          const drag = ui.drag
+
+          if (!drag) return
+          resize(drag.height - (event.clientY - drag.y))
+        }}
+        onPointerUp={() => setUi("drag", undefined)}
+        onPointerCancel={() => setUi("drag", undefined)}
+        onLostPointerCapture={() => setUi("drag", undefined)}
+        onDblClick={() => sidebar.state.setDockHeight(undefined)}
+        onKeyDown={(event) => {
+          const height = {
+            ArrowUp: size().height + STEP,
+            ArrowDown: size().height - STEP,
+            Home: size().min,
+            End: size().max,
+          }[event.key]
+
+          if (height === undefined) return
+          event.preventDefault()
+          resize(height)
+        }}
       >
-        <div
-          data-slot="sidebar-projects-dock-handle"
-          role="separator"
-          tabIndex={0}
-          aria-orientation="horizontal"
-          aria-label={language.t("sidebar.projects.dock.resize")}
-          aria-valuenow={Math.round(size().height)}
-          aria-valuemin={size().min}
-          aria-valuemax={Number.isFinite(size().max) ? size().max : undefined}
-          data-state={ui.drag ? "dragging" : undefined}
-          class="group/handle absolute inset-x-0 -top-[4px] z-10 flex h-[7px] cursor-row-resize touch-none items-center focus-visible:outline-none"
-          onPointerDown={(event) => {
-            if (event.button !== 0) return
-            event.preventDefault()
-            event.currentTarget.setPointerCapture(event.pointerId)
-            setUi("drag", { y: event.clientY, height: size().height })
-          }}
-          onPointerMove={(event) => {
-            const drag = ui.drag
-
-            if (!drag) return
-            resize(drag.height - (event.clientY - drag.y))
-          }}
-          onPointerUp={() => setUi("drag", undefined)}
-          onPointerCancel={() => setUi("drag", undefined)}
-          onLostPointerCapture={() => setUi("drag", undefined)}
-          onDblClick={() => sidebar.state.setDockHeight(undefined)}
-          onKeyDown={(event) => {
-            const height = {
-              ArrowUp: size().height + STEP,
-              ArrowDown: size().height - STEP,
-              Home: size().min,
-              End: size().max,
-            }[event.key]
-
-            if (height === undefined) return
-            event.preventDefault()
-            resize(height)
-          }}
+        <span
+          aria-hidden="true"
+          class="h-[3px] w-full bg-v2-border-border-base opacity-0 transition-opacity group-hover/handle:opacity-100 group-focus-visible/handle:opacity-100 group-data-[state=dragging]/handle:opacity-100"
+        />
+      </div>
+      <Show when={sections().attention.length > 0}>
+        <section
+          data-slot="sidebar-projects-dock-attention"
+          aria-label={language.t("sidebar.inbox.section.needsAttention")}
+          class="flex shrink-0 flex-col overflow-hidden"
+          style={{ height: `${size().attention}px` }}
         >
-          <span
-            aria-hidden="true"
-            class="h-[3px] w-full bg-v2-border-border-base opacity-0 transition-opacity group-hover/handle:opacity-100 group-focus-visible/handle:opacity-100 group-data-[state=dragging]/handle:opacity-100"
+          <DockSectionHeader
+            label={language.t("sidebar.inbox.section.needsAttention")}
+            count={sections().attention.length}
+            expanded={!collapsed()}
+            onToggle={() => sidebar.state.toggleAttention()}
           />
-        </div>
-        <Show when={sections().attention.length > 0}>
-          <section
-            data-slot="sidebar-projects-dock-attention"
-            aria-label={language.t("sidebar.inbox.section.needsAttention")}
-            class="flex shrink-0 flex-col overflow-hidden"
-            style={{ height: `${size().attention}px` }}
-          >
-            <DockSectionHeader
-              label={language.t("sidebar.inbox.section.needsAttention")}
-              count={sections().attention.length}
-              expanded={!collapsed()}
-              onToggle={() => sidebar.state.toggleAttention()}
-            />
-            <Show when={!collapsed()}>
-              <div data-scrollable class="min-h-0 flex-1 overflow-y-auto">
-                <div ref={(el) => setUi("attention", el)} class="flex flex-col gap-px pb-1">
-                  {rows(() => sections().attention)}
-                </div>
-              </div>
-            </Show>
-          </section>
-        </Show>
-        <Show when={sections().ongoing.length > 0}>
-          <section
-            data-slot="sidebar-projects-dock-ongoing"
-            aria-label={language.t("sidebar.projects.dock.ongoing")}
-            class="flex shrink-0 flex-col overflow-hidden"
-            classList={{ "border-t border-v2-border-border-muted": sections().attention.length > 0 }}
-            style={{ height: `${size().ongoing}px` }}
-          >
-            <DockSectionHeader label={language.t("sidebar.projects.dock.ongoing")} count={sections().ongoing.length} />
+          <Show when={!collapsed()}>
             <div data-scrollable class="min-h-0 flex-1 overflow-y-auto">
-              <div ref={(el) => setUi("ongoing", el)} class="flex flex-col gap-px pb-1">
-                {rows(() => sections().ongoing)}
+              <div ref={(el) => setUi("attention", el)} class="flex flex-col gap-px pb-1">
+                {rows(() => sections().attention)}
               </div>
             </div>
-          </section>
+          </Show>
+        </section>
+      </Show>
+      {/* Ongoing is permanent: with nothing running it shrinks to a faint placeholder heading. */}
+      <section
+        data-slot="sidebar-projects-dock-ongoing"
+        data-empty={sections().ongoing.length === 0 ? "" : undefined}
+        aria-label={language.t("sidebar.projects.dock.ongoing")}
+        class="flex shrink-0 flex-col overflow-hidden"
+        classList={{ "border-t border-v2-border-border-muted": sections().attention.length > 0 }}
+        style={{ height: `${size().ongoing}px` }}
+      >
+        <Show
+          when={sections().ongoing.length > 0}
+          fallback={
+            <div class="flex h-6 shrink-0 items-center gap-1.5 px-1.5 text-[11px] leading-4 text-v2-text-text-faint opacity-70">
+              <span class="min-w-0 truncate">{language.t("sidebar.projects.dock.ongoing")}</span>
+              <span class="ms-auto shrink-0">{language.t("sidebar.projects.dock.idle")}</span>
+            </div>
+          }
+        >
+          <DockSectionHeader label={language.t("sidebar.projects.dock.ongoing")} count={sections().ongoing.length} />
+          <div data-scrollable class="min-h-0 flex-1 overflow-y-auto">
+            <div ref={(el) => setUi("ongoing", el)} class="flex flex-col gap-px pb-1">
+              {rows(() => sections().ongoing)}
+            </div>
+          </div>
         </Show>
-      </div>
-    </Show>
+      </section>
+    </div>
   )
+}
+
+/**
+ * Tracks an element's border-box height. The update waits a frame because the Dock resizes its sections from these
+ * heights, which would otherwise resize observed elements inside the observer callback ("ResizeObserver loop").
+ */
+function createHeight(target: () => HTMLElement | undefined) {
+  const [height, setHeight] = createSignal<number>()
+
+  createEffect(() => {
+    const el = target()
+
+    if (!el) return
+    setHeight(el.offsetHeight)
+
+    let frame = 0
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => setHeight(el.offsetHeight))
+    })
+
+    observer.observe(el)
+    onCleanup(() => {
+      cancelAnimationFrame(frame)
+      observer.disconnect()
+    })
+  })
+
+  return height
 }
 
 /** Compact heading in the style of the tree's group headings; `onToggle` makes it a collapse button. */
