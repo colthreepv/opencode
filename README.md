@@ -56,7 +56,9 @@ The fork build helper is Windows-specific; other platforms have not been validat
   or modifies the maintained branch. You can also run it manually from the Actions tab.
 - **Windows builds:** the manual **Sidebar Windows desktop** workflow downloads the official CLI for the declared base,
   builds the desktop on a standard Windows runner, and uploads a ZIP with checksums and a build manifest.
-Build artifacts expire after **three days**; there is no automatic release publication or desktop installation.
+  A successful upload removes older sidebar Windows artifacts; failed builds leave the last artifact intact.
+  Artifacts otherwise expire after **three days**. Published release assets are retained separately; there is no automatic
+  release publication or desktop installation.
 
 To request a Windows package from the current maintained branch:
 

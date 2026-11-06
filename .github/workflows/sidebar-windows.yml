@@ -35,3 +35,34 @@ jobs:
           if-no-files-found: error
           retention-days: 3
           compression-level: 0
+
+  cleanup:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      # Keep write permission out of the build job, which executes repository code.
+      - name: Remove older sidebar build artifacts after a successful upload
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          CURRENT_RUN: ${{ github.run_id }}
+          CURRENT_ARTIFACT: sidebar-windows-x64-${{ github.sha }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GH_REPO/actions/runs/$CURRENT_RUN/artifacts" > current.json
+          created=$(jq -er --arg name "$CURRENT_ARTIFACT" '.artifacts[] | select(.name == $name and .expired == false) | .created_at' current.json)
+          gh api --paginate --slurp "repos/$GH_REPO/actions/artifacts?per_page=100" > artifacts.json
+          jq -r --arg created "$created" --arg run "$CURRENT_RUN" '
+            .[].artifacts[]
+            | select(.name | test("^sidebar-windows-x64-[0-9a-f]{40}$"))
+            | select(.created_at < $created and (.workflow_run.id | tostring) != $run)
+            | .id
+          ' artifacts.json > obsolete.txt
+          while IFS= read -r id; do
+            gh api --method DELETE "repos/$GH_REPO/actions/artifacts/$id"
+            echo "Deleted old sidebar artifact $id"
+          done < obsolete.txt
