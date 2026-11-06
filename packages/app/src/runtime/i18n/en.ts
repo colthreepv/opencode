@@ -799,7 +799,7 @@ export const dict = {
   "sidebar.projects.dock.idle": "Nothing running",
   "sidebar.projects.dock.resize": "Resize live sessions",
   "sidebar.projects.groups": "Groups",
-  "sidebar.projects.workers.label": "Waiting",
+  "sidebar.projects.workers.completing": "Completing",
   "sidebar.projects.workers.waiting.one": "Main session idle · {{count}} subagent still working",
   "sidebar.projects.workers.waiting.other": "Main session idle · {{count}} subagents still working",
   "sidebar.projects.workers.running.one": "Main session working · {{count}} subagent active",

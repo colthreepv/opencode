@@ -432,16 +432,27 @@ function DockRow(props: {
               <Show when={!waiting()}>
                 <ActivityRing width={12} height={12} />
               </Show>
+              <Show when={activity().workers > 0}>
+                <WorkerBadge count={activity().workers} label={workerLabel()} />
+              </Show>
               {/* Announce only the status: the ticking duration would be re-read every second. */}
               <span class="sr-only">{waiting() ? workerLabel() : language.t("sidebar.inbox.status.working")}</span>
               {/* Keep the status colour under the sweep. */}
-              <span aria-hidden="true" class="text-v2-state-fg-info [--text-shimmer-color:var(--v2-state-fg-info)]">
+              <span
+                aria-hidden="true"
+                classList={{
+                  "text-v2-state-fg-info [--text-shimmer-color:var(--v2-state-fg-info)]": !waiting(),
+                  "text-v2-state-fg-warning [--text-shimmer-color:var(--v2-state-fg-warning)]": waiting(),
+                }}
+              >
                 <Show when={waiting()} fallback={<TextShimmer text={working()} active />}>
-                  <span class="text-v2-text-text-muted">{language.t("sidebar.projects.workers.label")}</span>
+                  <TextShimmer text={language.t("sidebar.projects.workers.completing")} active />
                 </Show>
               </span>
-              <Show when={activity().workers > 0}>
-                <WorkerBadge count={activity().workers} label={workerLabel()} />
+              <Show when={waiting() && activity().since !== undefined}>
+                <span aria-hidden="true">
+                  ({compact(Math.max(0, Math.floor((props.now - activity().since!) / 1000)))})
+                </span>
               </Show>
             </Show>
           </span>

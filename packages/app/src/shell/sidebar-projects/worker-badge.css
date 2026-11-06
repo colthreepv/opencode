@@ -16,18 +16,31 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  .project-worker-badge-head {
+    animation: project-worker-badge-scan 2.4s ease-in-out infinite;
+  }
   .project-worker-badge-eyes {
-    animation: project-worker-badge-look 3.6s ease-in-out infinite;
+    animation: project-worker-badge-look 2.4s ease-in-out infinite;
   }
 }
 
-:root[data-motion="reduce"] .project-worker-badge-eyes {
+:root[data-motion="reduce"] .project-worker-badge-eyes,
+:root[data-motion="reduce"] .project-worker-badge-head {
   animation: none;
+}
+
+@keyframes project-worker-badge-scan {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1px);
+  }
 }
 
 @keyframes project-worker-badge-look {
   0%,
-  55%,
   100% {
     transform: translateX(0);
   }

@@ -22,7 +22,9 @@ SidebarProjects                 the whole sidebar (interface mode "projects")
 
 Sessions with inbox status `ready` (seen) appear only in the ProjectTree.
 
-While a root is idle but its descendants remain busy, Ongoing shows `Waiting` plus a compact animated SVG worker
+While a root is idle but its descendants remain busy, Ongoing shows an animated SVG worker badge/count before an amber
+`Completing` shimmer and the elapsed time of the longest-running active descendant (when its start is known).
+The compact worker
 badge and count. This describes outstanding family work, not a promise that the main session will resume. The tooltip
 explicitly says the main is idle. Main activity retains its Working shimmer; family-wide approval/input priority remains
 owned by upstream's inbox model. Counts use the client's family/active indexes and may settle during reconnect hydration.
