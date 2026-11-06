@@ -368,6 +368,14 @@ function DockRow(props: {
     })
   }
 
+  const completing = () => {
+    const since = activity().since
+    if (since === undefined) return language.t("sidebar.projects.workers.completing")
+    return language.t("sidebar.projects.workers.completingFor", {
+      duration: compact(Math.max(0, Math.floor((props.now - since) / 1000))),
+    })
+  }
+
   const age = () => {
     const seconds = Math.max(
       0,
@@ -446,14 +454,9 @@ function DockRow(props: {
                 }}
               >
                 <Show when={waiting()} fallback={<TextShimmer text={working()} active />}>
-                  <TextShimmer text={language.t("sidebar.projects.workers.completing")} active />
+                  <TextShimmer text={completing()} active />
                 </Show>
               </span>
-              <Show when={waiting() && activity().since !== undefined}>
-                <span aria-hidden="true">
-                  ({compact(Math.max(0, Math.floor((props.now - activity().since!) / 1000)))})
-                </span>
-              </Show>
             </Show>
           </span>
         </span>
