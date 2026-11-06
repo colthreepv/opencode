@@ -163,6 +163,14 @@ export function Titlebar(props: { verticalTabs?: { mount?: HTMLElement } }) {
     },
   ])
 
+  // Mouse back/forward buttons walk this same history. Cancelling the event keeps the browser's own history still.
+  makeEventListener(window, "mouseup", (event) => {
+    if (event.button !== 3 && event.button !== 4) return
+    event.preventDefault()
+    if (event.button === 3) back()
+    else forward()
+  })
+
   return (
     <header
       data-slot="titlebar-v2"
