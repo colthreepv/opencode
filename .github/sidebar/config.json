@@ -1,0 +1,6 @@
+{
+  "upstream": "anomalyco/opencode",
+  "baseTag": "v2.2.5",
+  "branch": "sidebar-projects",
+  "mention": "colthreepv"
+}

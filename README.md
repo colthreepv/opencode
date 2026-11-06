@@ -47,5 +47,18 @@ the bundled CLI may start a service. Client preferences are separate from the of
 
 The fork build helper is Windows-specific; other platforms have not been validated for this feature.
 
+## Fork automation
+
+- **Upstream compatibility:** a daily check watches stable **V2** releases, tries the sidebar branch on the new base
+  in a disposable runner, and reports conflicts or check results in one issue per release. It never pushes a rebase
+  or modifies the maintained branch. You can also run it manually from the Actions tab.
+- **Windows builds:** the manual **Sidebar Windows build** workflow downloads the official CLI for the declared base,
+  builds the desktop on a standard Windows runner, and uploads a ZIP with checksums and a build manifest.
+  Build artifacts expire after **three days**; there is no automatic release publication or desktop installation.
+
+The version contract lives in [`.github/sidebar/config.json`](.github/sidebar/config.json). Update `baseTag` only after
+reviewing and accepting an upstream rebase. The inherited upstream workflows are disabled in this fork; newly introduced
+upstream workflows must be reviewed before enabling them.
+
 See the [implementation and rebase notes](packages/app/src/shell/sidebar-projects/PLAN.md) for maintenance details,
 and the [upstream README](README.upstream.md) and [contributing guide](CONTRIBUTING.md) for the base project.
