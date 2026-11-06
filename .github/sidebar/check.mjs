@@ -4,7 +4,12 @@ import { spawnSync } from "node:child_process"
 // This script was copied from the workflow revision before checking out candidate code.
 const cfg = JSON.parse(await readFile(process.env.SIDEBAR_CONFIG, "utf8"))
 const result = { tag: process.env.TAG, sha: process.env.FORK_SHA, base: cfg.baseTag, checks: [] }
-const safeEnv = { ...process.env, GIT_TERMINAL_PROMPT: "0", GIT_EDITOR: "true", GIT_SEQUENCE_EDITOR: "true" }
+const safeEnv = {
+  ...process.env,
+  GIT_TERMINAL_PROMPT: "0", GIT_EDITOR: "true", GIT_SEQUENCE_EDITOR: "true",
+  GIT_COMMITTER_NAME: "Sidebar compatibility check",
+  GIT_COMMITTER_EMAIL: "41898282+github-actions[bot]@users.noreply.github.com",
+}
 delete safeEnv.GITHUB_OUTPUT
 delete safeEnv.GITHUB_ENV
 delete safeEnv.GITHUB_PATH
