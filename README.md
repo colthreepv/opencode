@@ -69,5 +69,16 @@ The version contract lives in [`.github/sidebar/config.json`](.github/sidebar/co
 reviewing and accepting an upstream rebase. The inherited upstream workflows are disabled in this fork; newly introduced
 upstream workflows must be reviewed before enabling them.
 
+The upstream watcher runs at approximately **06:17 UTC daily** (GitHub schedules may be delayed). A normal manual run
+does nothing when the latest stable V2 release is not newer than the base, or this fork commit was already checked.
+To force a compatibility probe, including against the current base:
+
+```sh
+gh workflow run sidebar-upstream.yml --repo colthreepv/opencode --ref sidebar-projects -f release_tag=v2.2.5
+```
+
+Candidate code runs in a read-only job; a separate reporting job can update issues. A green report is a compatibility
+signal, not an automatic rebase approval or a substitute for a desktop interaction test.
+
 See the [implementation and rebase notes](packages/app/src/shell/sidebar-projects/PLAN.md) for maintenance details,
 and the [upstream README](README.upstream.md) and [contributing guide](CONTRIBUTING.md) for the base project.
