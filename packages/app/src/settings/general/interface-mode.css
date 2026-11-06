@@ -1,6 +1,10 @@
 [data-component="interface-mode"] {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  /* Four across when each card gets 160px, otherwise two: never a lone card on its own row. */
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(clamp((100% - 36px) / 4, (676px - 100%) * 9999, (100% - 12px) / 2), 1fr)
+  );
   gap: 12px;
   min-width: 0;
   margin: 0;
@@ -51,8 +55,11 @@
 
   [data-slot="interface-mode-title"] {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    gap: 4px 8px;
+    /* A badge that wraps lines up with the title, not the radio. */
+    padding-inline-start: 22px;
     font-size: 13px;
     font-weight: 530;
     line-height: var(--line-height-compact);
@@ -62,6 +69,7 @@
 
   [data-slot="interface-mode-radio"] {
     flex-shrink: 0;
+    margin-inline-start: -22px;
     box-sizing: border-box;
     width: 14px;
     height: 14px;
