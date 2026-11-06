@@ -40,7 +40,8 @@ export function ProjectGlyph(props: { project: LocalProject; projectKey: string;
           class="project-glyph"
           aria-hidden="true"
           style={{
-            color: color() ? `var(--v2-avatar-bg-${getProjectAvatarVariant(color())})` : "var(--v2-text-text-muted)",
+            // The avatar's bg token turns dark in the dark scheme; its border token stays vivid in both.
+            color: color() ? `var(--v2-avatar-border-${getProjectAvatarVariant(color())})` : "var(--v2-text-text-muted)",
           }}
         >
           <GlyphContent glyph={value()} />
