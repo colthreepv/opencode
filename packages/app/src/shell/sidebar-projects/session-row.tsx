@@ -1,10 +1,12 @@
-import { Match, Switch } from "solid-js"
+import { createMemo, Match, Show, Switch } from "solid-js"
 import { ActivityRing } from "@opencode/ui/activity-ring"
 import { useLanguage } from "@/runtime/i18n/language"
 import type { InboxEntry } from "@/shell/titlebar/inbox-model"
 import { sessionTabTitle } from "@/shell/titlebar/tab-title"
 import { useDraggable } from "@dnd-kit/solid"
 import { projectKey } from "./state"
+import { sessionActivity } from "./session-activity"
+import { WorkerBadge } from "./worker-badge"
 
 /**
  * A root session under its project. The trailing mark follows the session tabs: a ring while working, a warning dot
@@ -12,6 +14,7 @@ import { projectKey } from "./state"
  */
 export function SessionRow(props: { entry: InboxEntry; selected: boolean; onOpen: () => void }) {
   const language = useLanguage()
+  const activity = createMemo(() => sessionActivity(props.entry.ctx.data, props.entry.session.id))
 
   const draggable = useDraggable({
     get id() {
@@ -64,9 +67,22 @@ export function SessionRow(props: { entry: InboxEntry; selected: boolean; onOpen
       </span>
       <Switch>
         <Match when={status() === "working"}>
-          <span class="flex size-4 shrink-0 items-center justify-center">
-            <ActivityRing />
-          </span>
+          <Show
+            when={activity().workers > 0}
+            fallback={
+              <span class="flex size-4 shrink-0 items-center justify-center">
+                <ActivityRing />
+              </span>
+            }
+          >
+            <WorkerBadge
+              count={activity().workers}
+              label={language.plural(
+                activity().main ? "sidebar.projects.workers.running" : "sidebar.projects.workers.waiting",
+                activity().workers,
+              )}
+            />
+          </Show>
         </Match>
         <Match when={status() !== "ready"}>
           <span class="flex size-4 shrink-0 items-center justify-center" aria-hidden="true">

@@ -21,6 +21,10 @@
   }
 }
 
+:root[data-motion="reduce"] .project-worker-badge-eyes {
+  animation: none;
+}
+
 @keyframes project-worker-badge-look {
   0%,
   55%,

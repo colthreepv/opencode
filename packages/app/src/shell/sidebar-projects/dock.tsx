@@ -12,6 +12,8 @@ import { compareWorking, workingSince } from "@/shell/titlebar/inbox-working"
 import { sessionTabTitle } from "@/shell/titlebar/tab-title"
 import { ProjectGlyph } from "./glyph"
 import { projectKey, useSidebarProjects } from "./state"
+import { sessionActivity } from "./session-activity"
+import { WorkerBadge } from "./worker-badge"
 
 /** Section header height: matches the `h-7` on `DockSectionHeader`. */
 const HEADER = 28
@@ -337,6 +339,13 @@ function DockRow(props: {
   const language = useLanguage()
   const project = createMemo(() => props.entry.ctx.projects.forSession(props.entry.session))
   const status = () => props.entry.status
+  const activity = createMemo(() => sessionActivity(props.entry.ctx.data, props.entry.session.id))
+  const waiting = () => !activity().main && activity().workers > 0
+  const workerLabel = () =>
+    language.plural(
+      waiting() ? "sidebar.projects.workers.waiting" : "sidebar.projects.workers.running",
+      activity().workers,
+    )
 
   const compact = (seconds: number) => {
     if (seconds < 60) return language.plural("sidebar.inbox.elapsed.seconds", seconds)
@@ -420,13 +429,20 @@ function DockRow(props: {
                 </>
               }
             >
-              <ActivityRing width={12} height={12} />
+              <Show when={!waiting()}>
+                <ActivityRing width={12} height={12} />
+              </Show>
               {/* Announce only the status: the ticking duration would be re-read every second. */}
-              <span class="sr-only">{language.t("sidebar.inbox.status.working")}</span>
+              <span class="sr-only">{waiting() ? workerLabel() : language.t("sidebar.inbox.status.working")}</span>
               {/* Keep the status colour under the sweep. */}
               <span aria-hidden="true" class="text-v2-state-fg-info [--text-shimmer-color:var(--v2-state-fg-info)]">
-                <TextShimmer text={working()} active />
+                <Show when={waiting()} fallback={<TextShimmer text={working()} active />}>
+                  <span class="text-v2-text-text-muted">{language.t("sidebar.projects.workers.label")}</span>
+                </Show>
               </span>
+              <Show when={activity().workers > 0}>
+                <WorkerBadge count={activity().workers} label={workerLabel()} />
+              </Show>
             </Show>
           </span>
         </span>
