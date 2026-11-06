@@ -5,7 +5,7 @@ Independent project; not built by or affiliated with the OpenCode team.
 
 <img src="docs/sidebar-projects.png" width="280" alt="Projects sidebar with custom groups, coloured project icons, nested conversations, a Needs attention dock and an idle Ongoing footer" />
 
-*Captured from the web UI with test projects and demo unread state. No private conversations are shown.*
+*Real web UI with demo projects, conversations and activity states. No private conversations are shown.*
 
 ## What's different
 
@@ -21,6 +21,19 @@ Independent project; not built by or affiliated with the OpenCode team.
 - **Navigation:** mouse Back/Forward uses the same history as the keyboard commands.
 
 Enable it under **Settings → General → Interface mode → Projects**. Other interface modes remain available.
+
+### Organize your projects
+
+Right-click a project to start a conversation, edit it, hide it, or move it to another group. Empty groups remain compact
+drop targets. Hiding a project never deletes its files or conversations.
+
+<img src="docs/sidebar-organize.png" width="680" alt="Project context menu with New session, Edit, Hide from sidebar and a Move to group submenu listing personal, work and hobbies" />
+
+### Make it yours
+
+Edit a project's display name, choose a monochrome glyph or emoji, and pick its colour in one popup.
+
+<img src="docs/sidebar-customize.png" width="800" alt="Edit project popup for music-library, with the project name, music glyph selected, emoji field and colour palette" />
 
 ## Data
 
