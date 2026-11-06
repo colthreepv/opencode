@@ -12,8 +12,13 @@ Independent project; not built by or affiliated with the OpenCode team.
 - **Project groups:** create, rename and reorder groups; drag projects within or between them.
 - **Project icons:** choose a coloured monochrome icon or an emoji.
 - **Project actions:** edit the display name, icon and colour; start a session with `+`, or hide a project from the sidebar
-  and restore it from **Groups → Hidden projects**. Hiding never deletes its files or conversations.
-- **Nested conversations:** five sessions per project, with **Show more** for older sessions.
+  and restore it from the toolbar's **… → Hidden projects** menu. Hiding never deletes its files or conversations.
+- **Nested conversations and pins:** pinned conversations stay above the newest five unpinned sessions per project,
+  with **Show more** for older sessions. Each set is ordered by its last update.
+- **Archived conversations:** toggle **Archived** in the compact toolbar to browse and restore history by group
+  and project. Empty groups disappear, older pages remain reachable, and the live Dock stays put.
+- **Conversation actions:** Pin and Archive on hover/focus; right-click or **Shift+F10** for the full menu, including
+  **Fork conversation**. Pin, Fork and Archive are also available in the conversation header's **…** menu.
 - **Session moves:** drag a conversation to another project on the same server; running sessions offer queue or steer.
 - **Bottom Dock:** collapsible **Needs attention** for approvals, questions, failures and unread results; permanent
   **Ongoing** with a blue text shimmer while sessions run and a compact placeholder when idle.
@@ -40,12 +45,18 @@ Edit a project's display name, choose a monochrome glyph or emoji, and pick its 
 Projects and conversations stay on your OpenCode server. Groups, project order, emoji/glyph choices and Dock preferences
 are client-local: browser localStorage, or the desktop client's `drafts.sqlite` (`state` table, `sidebar-projects` key).
 These layout preferences are not transferred automatically between browser and desktop.
+Pins and the archive-view preference are also client-local. Archiving a conversation is server-side and reversible;
+it preserves the local pin and never deletes files or stops a running agent. A conversation-level fork copies the
+current history and opens it without sending a prompt.
 
 ## Branch and builds
 
 [`sidebar-projects`](https://github.com/colthreepv/opencode/tree/sidebar-projects) is this fork's default branch,
 currently based on upstream **v2.2.5**. The branch is intended to be rebased onto upstream releases.
 Official OpenCode downloads do **not** include this sidebar.
+
+Download the [latest Windows release](https://github.com/colthreepv/opencode/releases/latest) and read the
+[fork changelog](CHANGELOG.md) for the changes in each release.
 
 For the current Windows build workflow, install the official OpenCode V2 desktop app and Bun, then run from this checkout:
 
@@ -88,7 +99,7 @@ With PowerShell 7 and the GitHub CLI installed, run from this checkout:
 ```powershell
 & .\packages\desktop\script\sidebar-update.ps1
 # Or select an exact release:
-& .\packages\desktop\script\sidebar-update.ps1 -Tag v2.2.5-sidebar.1
+& .\packages\desktop\script\sidebar-update.ps1 -Tag v2.2.5-sidebar.3
 ```
 
 The updater downloads and verifies the package before asking permission to close only the fork normally. It installs to

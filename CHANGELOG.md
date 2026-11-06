@@ -1,6 +1,69 @@
 # Changelog
 
-Release notes for OpenCode V2, newest first.
+Release notes for this Projects sidebar fork, followed by the upstream OpenCode V2 changelog.
+
+## v2.2.5-sidebar.3 — 2026-11-07
+
+Independent fork release based on official OpenCode **v2.2.5**. The bundled CLI and server API are unchanged.
+
+### Compact sidebar toolbar
+
+- Replaced the Groups heading with **New group**, an **Archived** toggle and a secondary menu for hidden projects.
+  Buttons show SVG icons and labels when space allows, and become square icon buttons in a narrow sidebar.
+  Tooltips and colours use the existing OpenCode design system; the thin separator remains.
+
+### Pin conversations within each project
+
+- Pinned conversations are always visible above unpinned conversations. Each set is ordered by the session's last
+  update; the normal five-row limit and **Show more** apply only to unpinned conversations.
+- Old pins are retrieved directly by session ID, even when they are outside the latest 200-session inbox index or
+  the first project page. Pins follow conversations to their current project after a move.
+- Pins are client-local preferences, shared by the sidebar and conversation-header actions. Archiving preserves a
+  pin, so restoring the conversation restores its priority. Pins are not automatically shared between clients.
+
+### Browse and restore archived conversations
+
+- **Archived** switches only the upper tree, preserving **Group → Project → Conversation**. Groups and projects
+  without archived conversations disappear; projects containing only archived conversations are discovered too.
+- Archive discovery fetches at most one session per project, with four requests in flight at most. Expanded projects
+  load 50-row cursor pages on demand; **Show more** can reach the full archive, not just the newest 50 sessions.
+- Archive, unarchive, move and delete events refresh discovery while the archive is open, including changes from
+  another client. Hidden projects remain hidden in both tree modes.
+- The live Dock stays visible and unchanged while browsing the archive. Archive removes that conversation from
+  the normal tree and Dock, but **does not stop a running agent**. Archive is reversible and server-side; it does not
+  delete messages, files or project changes. Tree dragging is disabled in the filtered archive view.
+
+### Conversation actions and full-history forks
+
+- Hover or keyboard-focus a conversation to reveal **Pin/Unpin** and **Archive/Unarchive**. A pinned row keeps a
+  compact pin marker when not hovered.
+- Right-click a conversation, or press **Shift+F10**, for **Open**, **Pin/Unpin**, **Fork conversation**, and
+  **Archive/Unarchive**. Fork stays in the menu rather than crowding each row with a third action button.
+- The conversation-header **…** menu now includes the same Pin, Fork and Archive actions alongside Rename,
+  Export and Delete, in every interface mode.
+- **Fork conversation** copies the history through the current end and opens the new conversation without sending
+  a prompt. The original stays intact. Message-specific fork behaviour is unchanged.
+- Fixed drag-and-drop accessibility metadata that incorrectly treated non-draggable containers and archived rows
+  as disabled, preventing otherwise valid actions on those rows.
+
+### Verification and Windows package
+
+- Production web build, repository lint/typecheck and the app's official TypeScript check passed.
+- Passed 950 app unit tests, 303 browser tests, and 44 focused end-to-end tests for the sidebar, header and Home.
+  The four new action/archive/pin scenarios also passed ten repetitions each without retries.
+- Windows x64 package retains the separate **OpenCode Dev** identity and disabled automatic updater. Extract the
+  entire ZIP, not just the executable. This release does not install itself or restart the ordinary OpenCode service.
+
+## Earlier fork releases
+
+- **v2.2.5-sidebar.2:** uniform theme-aware **Completing 22m** shimmer, animated worker badge and updated demo
+  screenshots; verified Windows update helper.
+- **v2.2.5-sidebar.1:** initial packaged Projects sidebar with custom groups, project icons, session moves,
+  live attention/ongoing Dock, project customization and sidebar-only project hiding.
+
+---
+
+## Upstream OpenCode V2
 
 ## v2.2.5 — 2026-10-30
 
