@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises"
-import { api, config, marker, pages, selectIssue, stable } from "./common.mjs"
+import { api, config, pages, selectIssue, stable } from "./common.mjs"
+import { formatReport } from "./format-report.mjs"
 
 const cfg = config(JSON.parse(await readFile(".github/sidebar/config.json", "utf8")))
 const encoded = process.env.REPORT || ""
@@ -18,12 +19,7 @@ const issue = selectIssue(issues, data.tag)
 const probe = data.tag === cfg.baseTag
 const title = probe ? `Sidebar compatibility probe: ${data.tag}` : `Sidebar compatibility with upstream ${data.tag}`
 const run = `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
-// Quoted JSON strings cannot break out of the fenced block, even for hostile filenames or test output.
-const detail = data.checks.map((c) => `${c.ok ? "PASS" : "FAIL"} ${c.name}${c.detail ? `\n${c.detail}` : ""}`).join("\n\n")
-const body = `${marker(data.tag)}\n${encoded ? `<!-- sidebar-fork:${data.sha} -->\n` : ""}${issue ? "" : `@${cfg.mention}\n\n`}` +
-  `${probe ? "Manual same-base compatibility probe" : "Upstream release compatibility check"}: **${data.ok ? "passed" : "failed"}**\n\n` +
-  `Base: \`${data.base}\` · Candidate: \`${data.tag}\` · Fork commit: \`${data.sha}\`\n\n[Workflow run](${run})\n\n` +
-  `Check details (JSON-escaped):\n\n\`\`\`json\n${JSON.stringify(detail).replaceAll("`", "\\u0060")}\n\`\`\`\n`
+const body = formatReport({ data, cfg, repository: process.env.GITHUB_REPOSITORY, run, encoded, issue })
 const endpoint = `/repos/${process.env.GITHUB_REPOSITORY}/issues${issue ? `/${issue.number}` : ""}`
 await api(endpoint, { method: issue ? "PATCH" : "POST", body: JSON.stringify({ title, body }), headers: { "content-type": "application/json" } })
 console.log(`${issue ? "Updated" : "Created"} compatibility issue for ${data.tag}`)
