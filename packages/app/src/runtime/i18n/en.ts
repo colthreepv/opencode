@@ -784,6 +784,11 @@ export const dict = {
   "sidebar.projects.ungrouped": "Ungrouped",
   "sidebar.projects.noSessions": "No sessions yet",
   "sidebar.projects.showMore": "Show more",
+  "sidebar.projects.glyph.title": "Change icon…",
+  "sidebar.projects.glyph.search": "Search icons",
+  "sidebar.projects.glyph.emoji": "Emoji",
+  "sidebar.projects.glyph.color": "Color",
+  "sidebar.projects.glyph.reset": "Reset",
   "sidebar.project.recentSessions": "Recent sessions",
   "sidebar.project.clearNotifications": "Clear notifications",
 
