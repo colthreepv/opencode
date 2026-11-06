@@ -56,8 +56,7 @@ The fork build helper is Windows-specific; other platforms have not been validat
   or modifies the maintained branch. You can also run it manually from the Actions tab.
 - **Windows builds:** the manual **Sidebar Windows desktop** workflow downloads the official CLI for the declared base,
   builds the desktop on a standard Windows runner, and uploads a ZIP with checksums and a build manifest.
-  A successful upload removes older sidebar Windows artifacts; failed builds leave the last artifact intact.
-  Artifacts otherwise expire after **three days**. Published release assets are retained separately; there is no automatic
+  Artifacts expire automatically after **three days**. Published release assets are retained separately; there is no automatic
   release publication or desktop installation.
 
 To request a Windows package from the current maintained branch:
@@ -68,6 +67,27 @@ gh workflow run sidebar-windows.yml --repo colthreepv/opencode --ref sidebar-pro
 
 Download the resulting artifact from the [Actions page](https://github.com/colthreepv/opencode/actions/workflows/sidebar-windows.yml),
 verify the ZIP against `SHA256SUMS`, and extract the whole app directory before launching it.
+
+### Apply a published Windows release
+
+With PowerShell 7 and the GitHub CLI installed, run from this checkout:
+
+```powershell
+& .\packages\desktop\script\sidebar-update.ps1
+# Or select an exact release:
+& .\packages\desktop\script\sidebar-update.ps1 -Tag v2.2.5-sidebar.1
+```
+
+The updater downloads and verifies the package before asking permission to close only the fork normally. It installs to
+`%LOCALAPPDATA%\Programs\ai.opencode.desktop.sidebar`, creates an **OpenCode Sidebar** Start-menu shortcut, and reopens it.
+Existing installations are kept in a sibling `.previous-*` directory; directory-promotion failures restore the old install.
+It never force-kills processes or operates the official app/service, and it leaves client preferences untouched.
+If the fork cannot close normally, close it yourself and rerun. Launch failure after installation may require manually
+restoring the retained previous directory.
+
+Use `-PrepareOnly` to download, verify and stage without closing/installing, or `-PackageDirectory <folder>` for an
+extracted Actions artifact containing the app ZIP, `SHA256SUMS` and `build-manifest.json`. Keep running this script from the
+checkout when migrating a fork launched from `dist/desktop/app`, so its exact path is recognized.
 
 The version contract lives in [`.github/sidebar/config.json`](.github/sidebar/config.json). Update `baseTag` only after
 reviewing and accepting an upstream rebase. The inherited upstream workflows are disabled in this fork; newly introduced
