@@ -7,7 +7,8 @@
   --text-shimmer-spread: 5.2ch;
   --text-shimmer-gutter: calc(var(--text-shimmer-spread) + 1ch);
   --text-shimmer-size: calc(200% + var(--text-shimmer-gutter) + var(--text-shimmer-gutter));
-  --text-shimmer-base-color: var(--text-weak);
+  /* `--text-shimmer-color` is the public hook: set it on the shimmer or any ancestor. */
+  --text-shimmer-base-color: var(--text-shimmer-color, var(--text-weak));
   --text-shimmer-peak-color: var(--text-strong);
   --text-shimmer-sweep: linear-gradient(
     var(--text-shimmer-angle),

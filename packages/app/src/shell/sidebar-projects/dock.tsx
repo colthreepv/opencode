@@ -394,10 +394,7 @@ function DockRow(props: {
               {/* Announce only the status: the ticking duration would be re-read every second. */}
               <span class="sr-only">{language.t("sidebar.inbox.status.working")}</span>
               {/* Keep the status colour under the sweep. */}
-              <span
-                aria-hidden="true"
-                class="text-v2-state-fg-info [&_[data-component=text-shimmer]]:[--text-shimmer-base-color:var(--v2-state-fg-info)]!"
-              >
+              <span aria-hidden="true" class="text-v2-state-fg-info [--text-shimmer-color:var(--v2-state-fg-info)]">
                 <TextShimmer text={working()} active />
               </span>
             </Show>
