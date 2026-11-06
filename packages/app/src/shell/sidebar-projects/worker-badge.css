@@ -1,0 +1,36 @@
+.project-worker-badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  block-size: 16px;
+  color: var(--v2-state-fg-info);
+  font-size: 12px;
+  line-height: var(--line-height-compact);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  svg {
+    flex: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .project-worker-badge-eyes {
+    animation: project-worker-badge-look 3.6s ease-in-out infinite;
+  }
+}
+
+@keyframes project-worker-badge-look {
+  0%,
+  55%,
+  100% {
+    transform: translateX(0);
+  }
+  68% {
+    transform: translateX(0.65px);
+  }
+  83% {
+    transform: translateX(-0.65px);
+  }
+}
