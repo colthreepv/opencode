@@ -1,6 +1,10 @@
 import { Key } from "@solid-primitives/keyed"
 import { createMemo, For, Show, type JSX } from "solid-js"
+import { Button } from "@opencode/ui/button"
 import { Icon } from "@opencode/ui/icon"
+import { IconButton } from "@opencode/ui/icon-button"
+import { Loader } from "@opencode/ui/loader"
+import { Tooltip } from "@opencode/ui/tooltip"
 import { displayName } from "@opencode/ui/project-avatar"
 import { useLanguage } from "@/runtime/i18n/language"
 import { useGlobal } from "@/runtime/server/runtime"
@@ -14,7 +18,7 @@ import { GlyphPicker } from "./glyph-picker"
 import { GroupNameInput, ProjectGroup, UNGROUPED } from "./project-group"
 import { DragDropProvider, KeyboardSensor, PointerSensor, useDragOperation } from "@dnd-kit/solid"
 import { isSortable, useSortable } from "@dnd-kit/solid/sortable"
-import { AutoScroller, Feedback, PointerActivationConstraints } from "@dnd-kit/dom"
+import { Accessibility, AutoScroller, Feedback, PointerActivationConstraints } from "@dnd-kit/dom"
 import { RestrictToVerticalAxis } from "@dnd-kit/abstract/modifiers"
 import { RestrictToElement } from "@dnd-kit/dom/modifiers"
 import { ContextMenu } from "@opencode/ui/context-menu"
@@ -23,9 +27,14 @@ import { createStore } from "solid-js/store"
 import { createSessionMove } from "./session-move"
 import { ProjectSessions } from "./project-sessions"
 import { openContextMenuFromKeyboard } from "./keyboard"
+import { createArchiveDiscovery, createPinHydration, pinTarget } from "./archive-model"
 import { useTabs } from "@/shell/tabs/tabs"
+import "./project-tree.css"
 
-/** Projects of every visible server, grouped as the user arranged them, each expandable to its root sessions. */
+/**
+ * Projects of every visible server, grouped as the user arranged them, each expandable to its root sessions. The
+ * Archived toggle swaps every list for the archive and hides projects and groups without archived conversations.
+ */
 export function ProjectTree() {
   const language = useLanguage()
   const global = useGlobal()
@@ -35,44 +44,111 @@ export function ProjectTree() {
   const moveSession = createSessionMove()
   let tree!: HTMLDivElement
 
-  const knownProjects = createMemo(() =>
-    servers.visible.flatMap((conn) => {
-      const ctx = global.ensureServerCtx(conn)
-      const server = ServerConnection.key(conn)
+  const archived = () => sidebar.state.store.archived
 
-      const recent = sidebar.inbox.entries().flatMap((entry) => {
-        if (entry.server !== server || inboxArchived(entry)) return []
-        const project = ctx.projects.forSession(entry.session)
+  // Keyed by plain string so pin keys, split from persisted state, can look servers up.
+  const connections = createMemo(
+    () =>
+      new Map(
+        servers.visible.map((conn) => {
+          const server = ServerConnection.key(conn)
 
-        return project ? [project] : []
-      })
-
-      return [
-        ...new Map(
-          [...ctx.projects.used(), ...recent].map((project) => [projectKey(server, project.worktree), project]),
-        ).entries(),
-      ].map(([key, project]) => ({ key, server, project }))
-    }),
+          return [String(server), { conn, server, ctx: global.ensureServerCtx(conn) }] as const
+        }),
+      ),
   )
 
-  const projects = createMemo(() => knownProjects().filter((item) => !sidebar.state.store.hidden[item.key]))
-  const hiddenProjects = createMemo(() => knownProjects().filter((item) => sidebar.state.store.hidden[item.key]))
-
-  const byKey = createMemo(() => new Map(projects().map((item) => [item.key, item])))
-
-  // Root sessions per project, newest first (the inbox order). Archived ones only reach the inbox once opened.
+  // Root sessions in the current mode per project, newest first (the inbox order).
   const sessions = createMemo(() =>
     Map.groupBy(
       sidebar.inbox.entries().flatMap((entry) => {
         const project = entry.ctx.projects.forSession(entry.session)
 
-        if (!project || inboxArchived(entry)) return []
+        if (!project || inboxArchived(entry) !== archived()) return []
 
-        return [{ key: projectKey(entry.server, project.worktree), entry }]
+        return [{ key: projectKey(entry.server, project.worktree), project, entry }]
       }),
       (item) => item.key,
     ),
   )
+
+  // Pins are grouped by the session's current project, which can differ from the directory stored when pinning.
+  const pinned = createMemo(() =>
+    Map.groupBy(
+      Object.keys(sidebar.state.store.pins).flatMap((key) => {
+        const target = pinTarget(key)
+        const item = connections().get(target.server)
+        const known = sidebar.inbox.byKey().get(key)
+        const session = item?.ctx.data.session.get(target.id) ?? known?.session
+
+        if (!item || !session || (session.time.archived !== undefined) !== archived()) return []
+        const project = item.ctx.projects.forSession(session)
+
+        if (!project) return []
+
+        const entry: InboxEntry = known
+          ? { ...known, session }
+          : { key, conn: item.conn, server: item.server, ctx: item.ctx, session, status: "ready" }
+
+        return [{ key: projectKey(item.server, project.worktree), project, entry }]
+      }),
+      (item) => item.key,
+    ),
+  )
+
+  // Wait for the index so pins it already covers are not fetched one by one.
+  const unresolvedPins = createMemo(() =>
+    sidebar.inbox.loading()
+      ? []
+      : Object.keys(sidebar.state.store.pins).flatMap((key) => {
+          const target = pinTarget(key)
+          const item = connections().get(target.server)
+
+          if (!item || sidebar.inbox.byKey().has(key) || item.ctx.data.session.get(target.id)) return []
+
+          return [{ key, id: target.id, server: item.server, ctx: item.ctx }]
+        }),
+  )
+
+  createPinHydration({ pins: unresolvedPins })
+
+  const knownProjects = createMemo(() =>
+    [...connections().values()].flatMap((item) => {
+      const recent = [...sessions().values(), ...pinned().values()].flatMap((list) =>
+        list.flatMap((value) => (value.entry.server === item.server ? [value.project] : [])),
+      )
+
+      // Projects whose conversations are all archived are only in the server catalog.
+      const catalog = archived() ? item.ctx.projects.unique() : []
+
+      return [
+        ...new Map(
+          [...item.ctx.projects.used(), ...catalog, ...recent].map((project) => [
+            projectKey(item.server, project.worktree),
+            project,
+          ]),
+        ).entries(),
+      ].map(([key, project]) => ({ key, server: item.server, ctx: item.ctx, project }))
+    }),
+  )
+
+  const shownProjects = createMemo(() => knownProjects().filter((item) => !sidebar.state.store.hidden[item.key]))
+  const hiddenProjects = createMemo(() => knownProjects().filter((item) => sidebar.state.store.hidden[item.key]))
+
+  const discovery = createArchiveDiscovery({
+    enabled: archived,
+    projects: () => (archived() ? shownProjects() : []),
+  })
+
+  const projects = createMemo(() =>
+    archived()
+      ? shownProjects().filter(
+          (item) => sessions().has(item.key) || pinned().has(item.key) || discovery.found(item.key),
+        )
+      : shownProjects(),
+  )
+
+  const byKey = createMemo(() => new Map(projects().map((item) => [item.key, item])))
 
   const groups = createMemo(() => {
     const ids = new Set(sidebar.state.store.groups.map((group) => group.id))
@@ -103,11 +179,14 @@ export function ProjectTree() {
               (sidebar.state.store.placement[b]?.order ?? Infinity),
           ),
       },
-    ]
+    ].filter((group) => !archived() || group.projects.length > 0)
   })
 
   // Without user groups the Ungrouped heading would only label the whole list.
   const headed = () => sidebar.state.store.groups.length > 0
+
+  const newGroup = () => language.t("sidebar.projects.toolbar.newGroup")
+  const archivedLabel = () => language.t("sidebar.projects.toolbar.archived")
 
   return (
     <DragDropProvider
@@ -121,7 +200,9 @@ export function ProjectTree() {
       ]}
       modifiers={[RestrictToVerticalAxis, RestrictToElement.configure({ element: () => tree })]}
       plugins={(defaults) => [
-        ...defaults.filter((plugin) => plugin !== AutoScroller && plugin !== Feedback),
+        // Rows own button/tree semantics and keyboard menus. DnD's plugin marks non-draggable history and the
+        // Ungrouped container aria-disabled, incorrectly disabling their otherwise usable descendants.
+        ...defaults.filter((plugin) => plugin !== Accessibility && plugin !== AutoScroller && plugin !== Feedback),
         AutoScroller.configure({ acceleration: 8, threshold: { x: 0, y: 0.05 } }),
         Feedback.configure({ dropAnimation: null }),
       ]}
@@ -182,42 +263,70 @@ export function ProjectTree() {
         aria-label={language.t("sidebar.projects.label")}
         class="flex min-h-0 flex-1 flex-col gap-px overflow-y-auto pb-1"
       >
-        <div class="mb-1 flex h-8 shrink-0 items-center border-b border-v2-border-border-muted px-1.5 text-[12px] font-medium text-v2-text-text-faint">
-          <span class="flex-1">{language.t("sidebar.projects.groups")}</span>
+        <div
+          data-slot="sidebar-projects-toolbar"
+          class="mb-1 flex h-8 shrink-0 items-center gap-0.5 border-b border-v2-border-border-muted px-1"
+        >
+          <Tooltip value={newGroup()} placement="bottom">
+            <Button
+              type="button"
+              data-no-dnd
+              data-slot="sidebar-projects-toolbar-button"
+              data-action="new-group"
+              size="small"
+              variant="ghost-muted"
+              icon="plus"
+              aria-label={newGroup()}
+              onClick={() => setStore("creating", true)}
+            >
+              <span data-slot="sidebar-projects-toolbar-label">{newGroup()}</span>
+            </Button>
+          </Tooltip>
+          <Tooltip value={archivedLabel()} placement="bottom">
+            <Button
+              type="button"
+              data-no-dnd
+              data-slot="sidebar-projects-toolbar-button"
+              data-pressed={archived() ? "" : undefined}
+              size="small"
+              variant="ghost-muted"
+              icon="archive"
+              aria-label={archivedLabel()}
+              aria-pressed={archived()}
+              onClick={() => sidebar.state.toggleArchived()}
+            >
+              <span data-slot="sidebar-projects-toolbar-label">{archivedLabel()}</span>
+            </Button>
+          </Tooltip>
+          <div class="flex-1" />
           <Show when={hiddenProjects().length > 0}>
             <Menu gutter={4} modal={false} placement="bottom-end">
-              <Menu.Trigger
-                as="button"
-                type="button"
-                aria-label={language.t("sidebar.projects.hidden")}
-                title={language.t("sidebar.projects.hidden")}
-                class="flex size-6 items-center justify-center rounded hover:bg-v2-overlay-simple-overlay-hover"
-              >
-                <Icon name="eye" size="small" />
-              </Menu.Trigger>
+              <Tooltip value={language.t("common.moreOptions")} placement="bottom">
+                <Menu.Trigger
+                  as={IconButton}
+                  data-no-dnd
+                  variant="ghost-muted"
+                  size="normal"
+                  icon={<Icon name="outline-dots" />}
+                  aria-label={language.t("common.moreOptions")}
+                />
+              </Tooltip>
               <Menu.Portal>
                 <Menu.Content>
-                  <For each={hiddenProjects()}>
-                    {(item) => (
-                      <Menu.Item onSelect={() => sidebar.state.showProject(item.key)}>
-                        {language.t("sidebar.projects.showProject", { name: displayName(item.project) })}
-                      </Menu.Item>
-                    )}
-                  </For>
+                  <Menu.Group>
+                    <Menu.GroupLabel>{language.t("sidebar.projects.hidden")}</Menu.GroupLabel>
+                    <For each={hiddenProjects()}>
+                      {(item) => (
+                        <Menu.Item onSelect={() => sidebar.state.showProject(item.key)}>
+                          {language.t("sidebar.projects.showProject", { name: displayName(item.project) })}
+                        </Menu.Item>
+                      )}
+                    </For>
+                  </Menu.Group>
                 </Menu.Content>
               </Menu.Portal>
             </Menu>
           </Show>
-          <button
-            type="button"
-            data-no-dnd
-            aria-label={language.t("sidebar.projects.group.create")}
-            title={language.t("sidebar.projects.group.create")}
-            class="flex size-6 items-center justify-center rounded hover:bg-v2-overlay-simple-overlay-hover"
-            onClick={() => setStore("creating", true)}
-          >
-            <Icon name="plus" size="small" />
-          </button>
         </div>
         <Show when={store.creating}>
           <GroupNameInput
@@ -229,11 +338,18 @@ export function ProjectTree() {
           />
         </Show>
         <Show
-          when={projects().length > 0 || headed()}
+          when={projects().length > 0 || (headed() && !archived())}
           fallback={
-            <div class="px-1.5 py-2 text-[13px] leading-4 text-v2-text-text-faint">
-              {language.t("sidebar.projects.empty")}
-            </div>
+            <Show
+              when={archived()}
+              fallback={
+                <div class="px-1.5 py-2 text-[13px] leading-4 text-v2-text-text-faint">
+                  {language.t("sidebar.projects.empty")}
+                </div>
+              }
+            >
+              <ArchiveStatus discovery={discovery} empty />
+            </Show>
           }
         >
           <Key each={groups()} by={(group) => group.id}>
@@ -246,6 +362,7 @@ export function ProjectTree() {
                   headed={headed()}
                   collapsed={group().collapsed}
                   empty={group().projects.length === 0}
+                  placeholder={!archived()}
                 >
                   <For each={group().projects}>
                     {(key) => (
@@ -264,7 +381,11 @@ export function ProjectTree() {
                               id={key}
                               project={item().project}
                               server={item().server}
+                              archived={archived()}
                               entries={(sessions().get(key) ?? []).map((value) => value.entry)}
+                              pinned={(pinned().get(key) ?? [])
+                                .map((value) => value.entry)
+                                .toSorted((a, b) => b.session.time.updated - a.session.time.updated)}
                             />
                           </ProjectRow>
                         )}
@@ -275,9 +396,60 @@ export function ProjectTree() {
               </Show>
             )}
           </Key>
+          <Show when={archived()}>
+            <ArchiveStatus discovery={discovery} />
+          </Show>
         </Show>
       </div>
     </DragDropProvider>
+  )
+}
+
+/** Discovery progress and failures in the archive view, and its empty state once every project answered. */
+function ArchiveStatus(props: { discovery: ReturnType<typeof createArchiveDiscovery>; empty?: boolean }) {
+  const language = useLanguage()
+
+  return (
+    <Show
+      when={props.discovery.loading() || props.discovery.failed()}
+      fallback={
+        <Show when={props.empty}>
+          <div class="px-1.5 py-2 text-[13px] leading-4 text-v2-text-text-faint">
+            {language.t("sidebar.projects.archived.empty")}
+          </div>
+        </Show>
+      }
+    >
+      <Show
+        when={!props.discovery.loading()}
+        fallback={
+          <div
+            role="status"
+            data-slot="sidebar-projects-archive-loading"
+            class="flex h-8 shrink-0 items-center gap-2 px-1.5 text-[12px] leading-4 text-v2-text-text-faint"
+          >
+            <Loader width={14} height={14} class="shrink-0" />
+            <span class="min-w-0 truncate">{language.t("sidebar.projects.archived.loading")}</span>
+          </div>
+        }
+      >
+        <div
+          role="alert"
+          data-slot="sidebar-projects-archive-error"
+          class="flex h-8 shrink-0 items-center gap-2 px-1.5 text-[12px] leading-4 text-v2-text-text-faint"
+        >
+          <span class="min-w-0 flex-1 truncate">{language.t("sidebar.projects.archived.failed")}</span>
+          <button
+            type="button"
+            data-no-dnd
+            class="shrink-0 rounded px-1 text-v2-text-text-muted hover:bg-v2-overlay-simple-overlay-hover hover:text-v2-text-text-base focus-visible:outline-none focus-visible:bg-v2-overlay-simple-overlay-hover"
+            onClick={() => props.discovery.retry()}
+          >
+            {language.t("common.retry")}
+          </button>
+        </div>
+      </Show>
+    </Show>
   )
 }
 
@@ -310,6 +482,10 @@ function ProjectRow(props: {
       return props.group
     },
     type: "project",
+    // The archive omits empty members, so its indices are not positions in the complete group order.
+    get disabled() {
+      return sidebar.state.store.archived
+    },
     accept: (source) =>
       source.type === "project" ||
       (source.type === "session" && source.data.server === props.server && source.data.projectKey !== props.projectKey),

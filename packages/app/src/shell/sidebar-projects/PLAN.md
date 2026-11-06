@@ -41,6 +41,8 @@ owned by upstream's inbox model. Counts use the client's family/active indexes a
 7. `desktop/src/main/service/background-service.ts`, `cli-version.ts` and `cli-version.test.ts` — safe dev-channel
    service discovery/version behavior; `gui-plugins/src/updater/main.ts` disables the dev updater.
 8. `desktop/script/fork-build.ps1` — Windows fork packaging helper. Package version changes identify this fork.
+9. `shell/routes/routes.tsx` — shares sidebar preferences above the shell, without creating an Inbox in other modes.
+10. `session/timeline/message-timeline.tsx` — conversation header menu includes shared Pin, Fork, Archive actions.
 
 The sidebar feature otherwise lives in `shell/sidebar-projects/`.
 
@@ -65,6 +67,10 @@ The sidebar feature otherwise lives in `shell/sidebar-projects/`.
 - `expanded: Record<projectKey, true>`, `shown: Record<projectKey, number>` (Show more)
 - `hidden: Record<projectKey, true>` — explicit sidebar-only hiding; Groups' Hidden projects menu restores entries.
   Unlike upstream's used-project hide, this also filters projects discovered from inbox sessions. Dock activity stays visible.
+- `pins: Record<server \0 sessionID, projectKey>` — the stored key is only the project at pin time; rows group by
+  the session's current project. Pinned rows always show, before the newest 5 unpinned ("Show more" adds 5).
+- `archived: boolean` — the tree lists only archived conversations and hides projects and groups without any;
+  the Dock is unaffected.
 - `dock: { height?: number; attentionCollapsed: boolean }`
 
 The sidebar waits for persisted state hydration before mounting mutating controls. Dock dragging previews locally;
@@ -78,10 +84,18 @@ groups exist; it is not collapsible).
 
 - `sidebar-projects.tsx` — `SidebarProjects`, provider and hydration gate.
 - `state.tsx` — persisted store + actions (`createSidebarProjectsState`), `projectKey`, and the context
-  `useSidebarProjects()` → `{ state, inbox }`: one store and one `createSessionInbox()` shared by tree and dock.
+  `useSidebarProjects()` → `{ state, inbox }`: one store shared with the header and one `createSessionInbox()` shared
+  by tree and dock only. The shell-level `SidebarProjectsStateProvider` owns preference hydration.
 - `project-tree.tsx` — `ProjectTree` and `ProjectRow`; `project-group.tsx` and `project-sessions.tsx` own groups and session lists.
 - `session-row.tsx` — `SessionRow` (status mark: ActivityRing working, warning dot approval/input, danger dot failed,
   accent dot unread done).
+- `session-actions.tsx` — full-history Fork without `before` or prompt submission, and server Archive/Unarchive;
+  both sidebar rows and `session-menu-items.tsx` in the header share these actions. Archival preserves local pins.
+- `archive-model.ts` — one-row existence probes over the server project catalog, with at most four concurrent
+  probes, lazy 50-row cursor pages per expanded project, and targeted old-pin hydration beyond the inbox index.
+  Archive/unarchive/move/delete events refresh archive discovery, including previously empty projects.
+- `project-tree.css` — responsive toolbar labels, square controls below 240px and theme-driven selected state.
+- `pin-icon.tsx` — local pushpin SVG using currentColor, matching the shared icon grid/stroke (catalog has no pin).
 - `dock.tsx` — `Dock`, section sizing and resize interaction.
 - `session-move.tsx` — move confirmation; `keyboard.ts` — keyboard interaction helpers.
 - `glyph.tsx`, `glyph-picker.tsx`, `glyphs.ts` and their CSS — project glyph rendering and selection.
@@ -95,6 +109,13 @@ groups exist; it is not collapsible).
 2. Keyboard navigation, context menus and Windows packaging implemented; rebase remains a release maintenance task.
 
 Physical mouse interaction on the desktop has been confirmed working; no additional mouse changes are planned.
+
+Conversation rows support Open, Pin/Unpin, Fork, Archive/Unarchive through right-click and Shift+F10. Hover and
+focus expose just Pin and Archive to preserve title space. The DnD Accessibility plugin is omitted in this tree:
+its aria-disabled on the non-draggable Ungrouped container and archived rows incorrectly disables usable controls.
+Buttons/tree roles and keyboard context menus are owned by the components instead.
+Archive mode disables tree dragging (its filtered indices are not the complete user order), but keeps row actions
+and project context menus available. Hidden projects stay hidden in both tree modes; the Dock still ignores hiding.
 
 ## Multi-server
 

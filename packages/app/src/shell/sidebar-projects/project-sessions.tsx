@@ -1,123 +1,117 @@
-import type { SessionInfo } from "@opencode/client/promise"
-import { createMemo, For, Show, onMount } from "solid-js"
+import { createEffect, createMemo, For, Show } from "solid-js"
 import { createStore } from "solid-js/store"
+import { Loader } from "@opencode/ui/loader"
 import { useGlobal } from "@/runtime/server/runtime"
 import { ServerConnection, useServers } from "@/runtime/server/registry"
 import { useLanguage } from "@/runtime/i18n/language"
 import type { LocalProject } from "@/shell/state/layout"
 import type { InboxEntry } from "@/shell/titlebar/inbox-model"
-import { errorMessage } from "@/shell/layout/helpers"
-import { showToast } from "@/shell/notifications/toast"
+import { createProjectPages } from "./archive-model"
 import { SessionRow } from "./session-row"
-import { projectKey, useSidebarProjects } from "./state"
+import { projectKey, SHOWN_STEP, useSidebarProjects } from "./state"
 
+/**
+ * An expanded project's root sessions: every pinned one, then the newest unpinned ones with "Show more", which pages
+ * through the server 50 at a time. `archived` lists the archive instead, with the same layout.
+ */
 export function ProjectSessions(props: {
   id: string
   project: LocalProject
   server: ServerConnection.Key
+  archived: boolean
+  /** Known root sessions of this project in the current mode, from the inbox and the live store. */
   entries: InboxEntry[]
+  /** Pinned root sessions of this project in the current mode, newest first. */
+  pinned: InboxEntry[]
 }) {
   const language = useLanguage()
   const sidebar = useSidebarProjects()
   const global = useGlobal()
   const servers = useServers()
+  // The archive is a transient view, so its length is not remembered like the normal list's.
+  const [store, setStore] = createStore({ shown: SHOWN_STEP })
 
-  const [store, setStore] = createStore<{
-    sessions: SessionInfo[]
-    cursor?: string
-    loaded: boolean
-    loading: boolean
-    more: boolean
-  }>({ sessions: [], loaded: false, loading: false, more: true })
+  const item = createMemo(() => {
+    const conn = servers.visible.find((value) => ServerConnection.key(value) === props.server)
 
-  const conn = () => servers.visible.find((item) => ServerConnection.key(item) === props.server)
+    if (!conn) return
 
-  const entries = createMemo(() => {
-    const connection = conn()
-
-    if (!connection) return props.entries
-    const ctx = global.ensureServerCtx(connection)
-
-    const fetched = ctx.data.session.apply(store.sessions).flatMap((session): InboxEntry[] => {
-      const live = ctx.data.session.get(session.id) ?? session
-      const project = ctx.projects.forSession(live)
-
-      if (!project || projectKey(props.server, project.worktree) !== props.id || live.time.archived !== undefined)
-        return []
-
-      return [
-        {
-          key: `${props.server}\0${live.id}`,
-          conn: connection,
-          server: props.server,
-          ctx,
-          session: live,
-          status: "ready",
-        },
-      ]
-    })
-
-    return [...new Map([...fetched, ...props.entries].map((entry) => [entry.key, entry])).values()].toSorted(
-      (a, b) => b.session.time.updated - a.session.time.updated,
-    )
+    return { conn, key: props.id, server: props.server, ctx: global.ensureServerCtx(conn), project: props.project }
   })
 
-  const byKey = createMemo(() => new Map(entries().map((entry) => [entry.key, entry])))
+  const pages = createProjectPages({ item, archived: () => props.archived })
 
-  const load = async () => {
-    const connection = conn()
+  const shown = () => (props.archived ? store.shown : sidebar.state.shown(props.id))
 
-    if (!connection || store.loading || !store.more) return
-    setStore("loading", true)
-    const ctx = global.ensureServerCtx(connection)
-    await ctx.sdk.api.session
-      .list({
-        project: props.project.id,
-        directory: props.project.id === "global" ? props.project.worktree : undefined,
-        parentID: null,
-        limit: 50,
-        order: "desc",
-        cursor: store.cursor,
-      })
-      .then((response) => {
-        response.data.forEach((session) => {
-          if (!ctx.data.session.get(session.id)) ctx.data.session.remember(session)
-        })
-        setStore({
-          sessions: [...store.sessions, ...response.data],
-          cursor: response.cursor.next ?? undefined,
-          more: response.data.length === 50 && !!response.cursor.next,
-          loaded: true,
-        })
-      })
-      .catch((cause) =>
-        showToast({
-          title: language.t("common.requestFailed"),
-          description: errorMessage(cause, language.t("common.requestFailed")),
-        }),
-      )
-      .finally(() => setStore("loading", false))
+  const unpinned = createMemo(() => {
+    const current = item()
+    const pinned = new Set(props.pinned.map((entry) => entry.key))
+    const known = new Map(props.entries.map((entry) => [entry.key, entry]))
+
+    // Page rows can be stale: the live store wins on project and archive state, and deleted sessions drop out.
+    const fetched = current
+      ? current.ctx.data.session
+          .apply(pages.sessions().map((page) => current.ctx.data.session.get(page.id) ?? page))
+          .flatMap((session): InboxEntry[] => {
+            const key = `${props.server}\0${session.id}`
+
+            if (known.has(key)) return []
+            const project = current.ctx.projects.forSession(session)
+
+            if (
+              (session.time.archived !== undefined) !== props.archived ||
+              projectKey(props.server, project?.worktree ?? session.location.directory) !== props.id
+            )
+              return []
+
+            return [{ key, conn: current.conn, server: props.server, ctx: current.ctx, session, status: "ready" }]
+          })
+      : []
+
+    return [...props.entries, ...fetched]
+      .filter((entry) => !pinned.has(entry.key))
+      .toSorted((a, b) => b.session.time.updated - a.session.time.updated)
+  })
+
+  const byKey = createMemo(() => new Map([...props.pinned, ...unpinned()].map((entry) => [entry.key, entry] as const)))
+
+  const visible = createMemo(() => [
+    ...props.pinned.map((entry) => entry.key),
+    ...unpinned()
+      .slice(0, shown())
+      .map((entry) => entry.key),
+  ])
+
+  const showMore = () => {
+    if (props.archived) setStore("shown", store.shown + SHOWN_STEP)
+
+    if (!props.archived) sidebar.state.showMore(props.id)
+
+    if (shown() >= unpinned().length) pages.next()
   }
 
-  onMount(() => void load())
+  // The inbox may already cover several pages. Skip overlapping pages until the user's requested rows are found.
+  createEffect(() => {
+    if (shown() > unpinned().length && pages.more() && !pages.loading() && !pages.failed()) pages.next()
+  })
+
+  const empty = () =>
+    pages.loaded() &&
+    !pages.more() &&
+    !pages.failed() &&
+    props.pinned.length === 0 &&
+    unpinned().length === 0 &&
+    (props.archived || !sidebar.inbox.loading())
 
   return (
     <>
-      <Show when={entries().length === 0 && store.loaded && !sidebar.inbox.loading()}>
-        <div class="flex h-7 items-center ps-[30px] text-[12px] leading-4 text-v2-text-text-faint">
-          {language.t("sidebar.projects.noSessions")}
-        </div>
-      </Show>
-      <For
-        each={entries()
-          .slice(0, sidebar.state.shown(props.id))
-          .map((entry) => entry.key)}
-      >
+      <For each={visible()}>
         {(key) => (
           <Show when={byKey().get(key)}>
             {(entry) => (
               <SessionRow
                 entry={entry()}
+                worktree={props.project.worktree}
                 selected={sidebar.inbox.selected(entry())}
                 onOpen={() => {
                   sidebar.inbox.open(entry())
@@ -128,17 +122,44 @@ export function ProjectSessions(props: {
           </Show>
         )}
       </For>
-      <Show when={entries().length > sidebar.state.shown(props.id) || store.more}>
+      <Show when={pages.loading()}>
+        <div
+          role="status"
+          data-slot="sidebar-projects-sessions-loading"
+          class="flex h-7 shrink-0 items-center ps-[30px] text-v2-icon-icon-faint"
+        >
+          <Loader width={14} height={14} />
+          <span class="sr-only">{language.t("common.loading")}</span>
+        </div>
+      </Show>
+      <Show when={pages.failed() && !pages.loading()}>
+        <div
+          role="alert"
+          data-slot="sidebar-projects-sessions-error"
+          class="flex h-7 shrink-0 items-center gap-2 ps-[30px] pe-1.5 text-[12px] leading-4 text-v2-text-text-faint"
+        >
+          <span class="min-w-0 flex-1 truncate">{language.t("sidebar.projects.sessions.failed")}</span>
+          <button
+            type="button"
+            data-no-dnd
+            class="shrink-0 rounded px-1 text-v2-text-text-muted hover:bg-v2-overlay-simple-overlay-hover hover:text-v2-text-text-base focus-visible:outline-none focus-visible:bg-v2-overlay-simple-overlay-hover"
+            onClick={pages.retry}
+          >
+            {language.t("common.retry")}
+          </button>
+        </div>
+      </Show>
+      <Show when={empty()}>
+        <div class="flex h-7 items-center ps-[30px] text-[12px] leading-4 text-v2-text-text-faint">
+          {language.t(props.archived ? "sidebar.projects.archived.empty" : "sidebar.projects.noSessions")}
+        </div>
+      </Show>
+      <Show when={!pages.loading() && !pages.failed() && (unpinned().length > shown() || pages.more())}>
         <button
           type="button"
-          disabled={store.loading}
           data-slot="sidebar-projects-show-more"
-          class="flex h-7 shrink-0 items-center rounded-[6px] ps-[30px] text-start text-[12px] leading-4 text-v2-text-text-faint hover:bg-v2-overlay-simple-overlay-hover hover:text-v2-text-text-muted focus-visible:outline-none focus-visible:bg-v2-overlay-simple-overlay-hover disabled:opacity-50"
-          onClick={() => {
-            sidebar.state.showMore(props.id)
-
-            if (sidebar.state.shown(props.id) >= entries().length) void load()
-          }}
+          class="flex h-7 shrink-0 items-center rounded-[6px] ps-[30px] text-start text-[12px] leading-4 text-v2-text-text-faint hover:bg-v2-overlay-simple-overlay-hover hover:text-v2-text-text-muted focus-visible:outline-none focus-visible:bg-v2-overlay-simple-overlay-hover"
+          onClick={showMore}
         >
           {language.t("sidebar.projects.showMore")}
         </button>

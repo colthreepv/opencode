@@ -499,6 +499,7 @@ export function createMockServerHandler(
           cursors: new Map<string, string>(),
           nextCursor: 0,
           sessionCreates: 0,
+          sessionForks: 0,
           persistentPty,
           emit,
           mcp: new Map<string, MockMcpStatus>(),
@@ -597,6 +598,7 @@ function mockHandlers(
     cursors: Map<string, string>
     nextCursor: number
     sessionCreates: number
+    sessionForks: number
     persistentPty: ReturnType<typeof createPersistentPty>
     emit: (events: MockServerEvent[]) => void
     // MCP status overrides by `<directory>\n<server>`, and OAuth attempt creation times by attempt ID.
@@ -1120,6 +1122,14 @@ function mockHandlers(
                     .toLowerCase()
                     .includes(ctx.query.search.toLowerCase()),
             )
+            .filter(
+              (session) =>
+                ctx.query.project === undefined || (session.projectID ?? "project") === ctx.query.project,
+            )
+            .filter(
+              (session) =>
+                ctx.query.archived === undefined || sessionArchived(session) === (ctx.query.archived === "true"),
+            )
 
           const ordered = ctx.query.order === "asc" ? sessions : sessions.toReversed()
           const offset = Number(ctx.query.cursor ?? 0)
@@ -1169,6 +1179,30 @@ function mockHandlers(
             return session
               ? Effect.succeed({ data: currentSession(session, config.directory) })
               : Effect.fail(new MockNotFound({ message: "Session not found" }))
+          }),
+        sessionFork: (ctx) =>
+          Effect.suspend(() => {
+            const parent = config.sessions.find((item) => item.id === ctx.params.sessionID)
+
+            if (!parent) return Effect.fail(new MockNotFound({ message: "Session not found" }))
+
+            const created = Date.now()
+
+            const session = currentSession(
+              {
+                ...parent,
+                id: `ses_fork_${++state.sessionForks}`,
+                parentID: undefined,
+                title: forkTitle(String(parent.title ?? parent.id)),
+                time: { created, updated: created },
+                revert: undefined,
+              },
+              config.directory,
+            )
+
+            config.sessions.push(session)
+
+            return Effect.succeed({ data: session })
           }),
         sessionRemove: () => noContent,
         sessionShell: () => noContent,
@@ -1286,10 +1320,20 @@ function mockHandlers(
         },
         sessionRename: (ctx) =>
           Effect.sync(() => {
-            const title = Option.getOrUndefined(decodeSessionRename(ctx.payload))?.title
+            const patch = Option.getOrUndefined(decodeSessionUpdate(ctx.payload))
             const session = config.sessions.find((item) => item.id === ctx.params.sessionID)
 
-            if (session && title !== undefined) session.title = title
+            if (!session || !patch) return
+
+            if (patch.title !== undefined) session.title = patch.title
+
+            if (patch.archived === undefined) return
+
+            const time = Predicate.isObject(session.time) ? { ...session.time } : {}
+
+            if (patch.archived) time.archived = Date.now()
+            else delete time.archived
+            session.time = time
           }).pipe(Effect.andThen(noContent)),
         sessionCommand: (ctx) => {
           const recordCommand = config.onCommand
@@ -1466,6 +1510,16 @@ function currentPermissions(values: readonly unknown[]) {
   })
 }
 
+const forkTitle = (title: string) => {
+  const match = title.match(/^(.+) \(fork #(\d+)\)$/)
+
+  return match ? `${match[1]} (fork #${Number.parseInt(match[2]!, 10) + 1})` : `${title} (fork #1)`
+}
+
+function sessionArchived(session: MockSession) {
+  return Predicate.isObject(session.time) && session.time.archived !== undefined
+}
+
 export function currentSession(session: MockSession, fallbackDirectory?: string) {
   const seed = decodeSession(session)
 
@@ -1512,7 +1566,9 @@ const decodeSessionCreate = Schema.decodeUnknownOption(
   Schema.Struct({ id: lenient(Schema.String), title: lenient(Schema.String), parentID: lenient(Schema.String) }),
 )
 
-const decodeSessionRename = Schema.decodeUnknownOption(Schema.Struct({ title: Schema.String }))
+const decodeSessionUpdate = Schema.decodeUnknownOption(
+  Schema.Struct({ title: Schema.optionalKey(Schema.String), archived: Schema.optionalKey(Schema.Boolean) }),
+)
 
 const decodeRevertStage = Schema.decodeUnknownOption(Schema.Struct({ messageID: Schema.String }))
 

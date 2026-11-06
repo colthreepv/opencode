@@ -1,8 +1,9 @@
 import type { SessionMessageInfo } from "@opencode/client/promise"
 import { expect, test, type Page } from "@playwright/test"
-import { REMOTE_SERVER, seed, sessionHref } from "../utils/app"
+import { REMOTE_SERVER, SERVER, seed, sessionHref } from "../utils/app"
 import { fixture, mockStressTimeline } from "../utils/session-fixture"
 import { reviewTabs } from "../utils/side-panel"
+import { pinnedSession } from "../utils/sidebar-projects"
 import { expectSessionTitle } from "../utils/waits"
 import { mockRemoteServer, mockWorkspace, openSession } from "../utils/workspace"
 
@@ -110,8 +111,14 @@ for (const direction of ["ltr", "rtl"] as const) {
 
     await options.click()
     const actions = page.getByRole("menu").filter({ has: page.getByRole("menuitem", { name: "Rename", exact: true }) })
-    await expect(actions.getByRole("menuitem")).toHaveText(["Rename", "Export…", "Delete…"])
-    await expect(actions.locator("svg")).toHaveCount(0)
+    await expect(actions.getByRole("menuitem")).toHaveText([
+      "Rename",
+      "Export…",
+      "Pin conversation",
+      "Fork conversation",
+      "Archive conversation",
+      "Delete…",
+    ])
     await actions.getByRole("menuitem", { name: "Rename", exact: true }).click()
     await expect(header.getByRole("textbox")).toBeFocused()
     await header.getByRole("textbox").press("Escape")
@@ -799,4 +806,78 @@ test.describe("revert", () => {
     await message.hover()
     await expect(message.getByRole("button", { name: "Rewind to here" })).toHaveCount(0)
   })
+})
+
+test("pins, forks, and archives a conversation from the header menu", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  const directory = "C:/OpenCode/Header Actions"
+  const sessionID = "ses_header_actions"
+  const forks: unknown[] = []
+  const patches: unknown[] = []
+  const prompts: string[] = []
+
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname
+
+    if (request.method() === "POST" && path === `/api/session/${sessionID}/fork`)
+      forks.push(request.postDataJSON())
+
+    if (request.method() === "PATCH" && /^\/api\/session\/[^/]+$/.test(path)) patches.push(request.postDataJSON())
+
+    if (request.method() === "POST" && path.endsWith("/prompt")) prompts.push(path)
+  })
+
+  await openSession(page, {
+    name: "Header Actions",
+    directory,
+    sessions: [{ id: sessionID, title: "Header actions", directory }],
+  })
+
+  const header = page.locator("[data-session-title]")
+  const options = header.getByRole("button", { name: "More options", exact: true })
+
+  const menu = () =>
+    page.getByRole("menu").filter({ has: page.getByRole("menuitem", { name: "Rename", exact: true }) })
+
+  await options.click()
+  await expect(menu().getByRole("menuitem")).toHaveText([
+    "Rename",
+    "Export…",
+    "Pin conversation",
+    "Fork conversation",
+    "Archive conversation",
+    "Delete…",
+  ])
+  await menu().getByRole("menuitem", { name: "Pin conversation", exact: true }).click()
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const stored = JSON.parse(localStorage.getItem("opencode.global.dat:sidebar-projects") ?? "{}")
+
+        return stored.pins ?? {}
+      }),
+    )
+    .toEqual(pinnedSession(SERVER, sessionID, directory))
+
+  await page.reload()
+  await expectSessionTitle(page, "Header actions")
+  await options.click()
+  await expect(menu().getByRole("menuitem", { name: "Unpin conversation", exact: true })).toBeVisible()
+  await menu().getByRole("menuitem", { name: "Fork conversation", exact: true }).click()
+  await expectSessionTitle(page, "Header actions (fork #1)")
+  expect(forks).toHaveLength(1)
+  expect(forks[0]).not.toHaveProperty("before")
+  expect(prompts).toEqual([])
+  await expect(page.getByRole("textbox", { name: "Prompt" })).toHaveText("")
+
+  const archived = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PATCH" &&
+      new URL(response.url()).pathname === "/api/session/ses_fork_1",
+  )
+
+  await options.click()
+  await menu().getByRole("menuitem", { name: "Archive conversation", exact: true }).click()
+  expect((await archived).ok()).toBe(true)
+  expect(patches).toEqual([{ archived: true }])
 })

@@ -1,0 +1,29 @@
+[data-slot="sidebar-projects-toolbar"] {
+  container: sidebar-projects-toolbar / inline-size;
+
+  [data-action="new-group"] [data-slot="icon-svg"] {
+    color: var(--v2-icon-icon-accent);
+  }
+}
+
+/* The Archived toggle reads as pressed while the tree shows the archive, like an expanded ghost button. */
+[data-slot="sidebar-projects-toolbar-button"][data-pressed] {
+  background-color: var(--v2-overlay-simple-overlay-pressed);
+  color: var(--v2-icon-icon-accent);
+
+  [data-slot="icon-svg"] {
+    color: var(--v2-icon-icon-accent);
+  }
+}
+
+/* Labelled buttons need about 240px; a narrower sidebar keeps their icons as square buttons with tooltips. */
+@container sidebar-projects-toolbar (max-width: 239px) {
+  [data-slot="sidebar-projects-toolbar-button"] {
+    inline-size: 24px;
+    padding-inline: 0;
+  }
+
+  [data-slot="sidebar-projects-toolbar-label"] {
+    display: none;
+  }
+}

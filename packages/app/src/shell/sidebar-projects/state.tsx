@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+import type { SessionInfo } from "@opencode/client/promise"
 import { createContext, useContext, type ParentProps } from "solid-js"
 import { produce } from "solid-js/store"
 import { uuid } from "@opencode/util/uuid"
@@ -30,6 +31,8 @@ const SidebarProjectsState = Persistence.struct({
   glyphs: Persistence.record(Glyph),
   expanded: Persistence.record(Schema.Literal(true)),
   hidden: Persistence.record(Schema.Literal(true)),
+  pins: Persistence.record(Schema.String),
+  archived: Schema.Boolean,
   shown: Persistence.record(Schema.Finite),
   dock: Persistence.struct({
     height: Persistence.optional(Schema.Finite),
@@ -53,6 +56,8 @@ export function createSidebarProjectsState() {
     glyphs: {},
     expanded: {},
     hidden: {},
+    pins: {},
+    archived: false,
     shown: {},
     dock: { attentionCollapsed: false },
   })
@@ -114,6 +119,7 @@ export function createSidebarProjectsState() {
       const shown = visible?.filter((item) => item !== key)
       const next = shown?.[Math.max(0, index)]
       const previous = shown?.[Math.min(index, shown.length) - 1]
+
       // Sortable indices address rendered projects, not members hidden with their server.
       const position =
         group === undefined || !shown
@@ -178,6 +184,25 @@ export function createSidebarProjectsState() {
         }),
       )
     },
+    pinned: (server: ServerConnection.Key, sessionID: string) => !!store.pins[`${server}\0${sessionID}`],
+    togglePin(server: ServerConnection.Key, session: SessionInfo, worktree = session.location.directory) {
+      if (!ready()) return
+      const key = `${server}\0${session.id}`
+      setStore(
+        produce((draft) => {
+          if (draft.pins[key]) {
+            delete draft.pins[key]
+
+            return
+          }
+
+          draft.pins[key] = projectKey(server, worktree)
+        }),
+      )
+    },
+    toggleArchived() {
+      setStore("archived", !store.archived)
+    },
     toggleAttention() {
       setStore("dock", "attentionCollapsed", !store.dock.attentionCollapsed)
     },
@@ -186,11 +211,28 @@ export function createSidebarProjectsState() {
 
 export type SidebarProjectsStore = ReturnType<typeof createSidebarProjectsState>
 
+const SidebarProjectsStateContext = createContext<SidebarProjectsStore>()
+
+/** Preferences are shared with conversation-header actions, without starting an inbox in other interface modes. */
+export function SidebarProjectsStateProvider(props: ParentProps) {
+  const state = createSidebarProjectsState()
+
+  return <SidebarProjectsStateContext.Provider value={state}>{props.children}</SidebarProjectsStateContext.Provider>
+}
+
+export function useSidebarProjectsState() {
+  const state = useContext(SidebarProjectsStateContext)
+
+  if (!state) throw new Error("useSidebarProjectsState must be used within SidebarProjectsStateProvider")
+
+  return state
+}
+
 const SidebarProjectsContext = createContext<{ state: SidebarProjectsStore; inbox: SessionInbox }>()
 
 /** One store and one session inbox shared by the tree and the dock. */
 export function SidebarProjectsProvider(props: ParentProps) {
-  const value = { state: createSidebarProjectsState(), inbox: createSessionInbox() }
+  const value = { state: useSidebarProjectsState(), inbox: createSessionInbox() }
 
   return <SidebarProjectsContext.Provider value={value}>{props.children}</SidebarProjectsContext.Provider>
 }

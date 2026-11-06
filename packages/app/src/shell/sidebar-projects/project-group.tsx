@@ -51,6 +51,8 @@ export function ProjectGroup(props: {
   headed: boolean
   collapsed: boolean
   empty: boolean
+  /** Offer an empty group as a labelled drop target; the archive view hides empty groups instead. */
+  placeholder: boolean
   children: JSX.Element
 }) {
   const sidebar = useSidebarProjects()
@@ -68,7 +70,7 @@ export function ProjectGroup(props: {
     type: "group",
     accept: "group",
     get disabled() {
-      return props.id === UNGROUPED
+      return props.id === UNGROUPED || !props.placeholder
     },
   })
 
@@ -167,7 +169,7 @@ export function ProjectGroup(props: {
           classList={{ "bg-v2-overlay-simple-overlay-hover": body.isDropTarget() }}
         >
           <Show
-            when={!props.empty}
+            when={!props.empty || !props.placeholder}
             fallback={
               <div class="flex h-6 items-center px-1.5 text-[12px] leading-4 text-v2-text-text-faint">
                 {language.t("sidebar.projects.group.empty")}
