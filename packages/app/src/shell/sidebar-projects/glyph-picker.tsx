@@ -54,7 +54,7 @@ export function GlyphPicker(props: { project: LocalProject; server: ServerConnec
 
   const navigate = (event: KeyboardEvent) => {
     const buttons = [...grid.querySelectorAll<HTMLButtonElement>("button")]
-    const current = buttons.indexOf(event.target as HTMLButtonElement)
+    const current = buttons.findIndex((button) => button === event.target)
 
     if (current < 0) return
     // Columns follow the wrapped layout: count the cells on the first row.

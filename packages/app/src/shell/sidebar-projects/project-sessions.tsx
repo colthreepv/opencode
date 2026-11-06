@@ -133,7 +133,7 @@ export function ProjectSessions(props: {
           type="button"
           disabled={store.loading}
           data-slot="sidebar-projects-show-more"
-          class="flex h-7 items-center rounded ps-[30px] text-start text-[12px] leading-4 text-v2-text-text-faint hover:bg-v2-overlay-simple-overlay-hover"
+          class="flex h-7 shrink-0 items-center rounded-[6px] ps-[30px] text-start text-[12px] leading-4 text-v2-text-text-faint hover:bg-v2-overlay-simple-overlay-hover hover:text-v2-text-text-muted focus-visible:outline-none focus-visible:bg-v2-overlay-simple-overlay-hover disabled:opacity-50"
           onClick={() => {
             sidebar.state.showMore(props.id)
 

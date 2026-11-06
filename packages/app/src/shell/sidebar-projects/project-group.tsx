@@ -8,6 +8,7 @@ import { useDialog } from "@opencode/ui/context/dialog"
 import { Icon } from "@opencode/ui/icon"
 import { useLanguage } from "@/runtime/i18n/language"
 import { PluginConfirmDialog } from "@/runtime/plugin/dialogs"
+import { openContextMenuFromKeyboard } from "./keyboard"
 import { useSidebarProjects } from "./state"
 
 export const UNGROUPED = "\0ungrouped"
@@ -106,6 +107,8 @@ export function ProjectGroup(props: {
       data-slot="sidebar-projects-group"
       role="group"
       aria-label={props.name}
+      // Without a heading the group itself is the drag activator, which dnd-kit would make a tab stop.
+      tabIndex={props.headed ? undefined : -1}
       class="flex shrink-0 flex-col gap-px"
     >
       <Show when={props.headed}>
@@ -119,10 +122,11 @@ export function ProjectGroup(props: {
                 ref={sortable.handleRef}
                 data-slot="sidebar-projects-group-header"
                 aria-expanded={!props.collapsed}
-                class="mt-2 flex h-7 w-full items-center gap-1 rounded px-1.5 text-start text-[12px] leading-4 font-medium text-v2-text-text-faint hover:bg-v2-overlay-simple-overlay-hover"
+                class="mt-3 flex h-7 w-full items-center gap-1 rounded-[6px] px-1.5 text-start text-[12px] leading-4 font-semibold text-v2-text-text-muted hover:bg-v2-overlay-simple-overlay-hover focus-visible:outline-none focus-visible:bg-v2-overlay-simple-overlay-hover"
                 onClick={() => {
                   if (props.id !== UNGROUPED) sidebar.state.toggleGroup(props.id)
                 }}
+                onKeyDown={openContextMenuFromKeyboard}
                 onDblClick={() => {
                   if (props.id !== UNGROUPED) setStore("editing", true)
                 }}

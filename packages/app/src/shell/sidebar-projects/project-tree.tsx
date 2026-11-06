@@ -12,7 +12,7 @@ import { projectKey, useSidebarProjects } from "./state"
 import { ProjectGlyph } from "./glyph"
 import { GlyphPicker } from "./glyph-picker"
 import { GroupNameInput, ProjectGroup, UNGROUPED } from "./project-group"
-import { DragDropProvider, PointerSensor, useDragOperation } from "@dnd-kit/solid"
+import { DragDropProvider, KeyboardSensor, PointerSensor, useDragOperation } from "@dnd-kit/solid"
 import { isSortable, useSortable } from "@dnd-kit/solid/sortable"
 import { AutoScroller, Feedback, PointerActivationConstraints } from "@dnd-kit/dom"
 import { RestrictToVerticalAxis } from "@dnd-kit/abstract/modifiers"
@@ -21,6 +21,7 @@ import { ContextMenu } from "@opencode/ui/context-menu"
 import { createStore } from "solid-js/store"
 import { createSessionMove } from "./session-move"
 import { ProjectSessions } from "./project-sessions"
+import { openContextMenuFromKeyboard } from "./keyboard"
 
 /** Projects of every visible server, grouped as the user arranged them, each expandable to its root sessions. */
 export function ProjectTree() {
@@ -106,7 +107,8 @@ export function ProjectTree() {
   return (
     <DragDropProvider
       sensors={(defaults) => [
-        ...defaults.filter((sensor) => sensor !== PointerSensor),
+        // Enter and Space open rows rather than pick them up; keyboard users move projects from the context menu.
+        ...defaults.filter((sensor) => sensor !== PointerSensor && sensor !== KeyboardSensor),
         PointerSensor.configure({
           activationConstraints: [new PointerActivationConstraints.Distance({ value: 4 })],
           preventActivation: (event) => event.target instanceof Element && !!event.target.closest("[data-no-dnd]"),
@@ -308,13 +310,17 @@ function ProjectRow(props: {
           title={props.project.worktree}
           class="group/project flex h-8 w-full shrink-0 items-center gap-2 rounded-[6px] px-1.5 text-start text-[13px] leading-4 text-v2-text-text-base hover:bg-v2-overlay-simple-overlay-hover focus-visible:outline-none focus-visible:bg-v2-overlay-simple-overlay-hover"
           onClick={props.onToggle}
+          onKeyDown={openContextMenuFromKeyboard}
           classList={{
             "bg-v2-background-bg-layer-02 ring-1 ring-inset ring-v2-border-border-base":
               sortable.isDropTarget() && operation.source()?.type === "session",
           }}
         >
           <ProjectGlyph project={props.project} projectKey={props.projectKey} />
-          <bdi class="min-w-0 flex-1 truncate font-medium">{displayName(props.project)}</bdi>
+          {/* The hover edit button overlays the row end, so the name truncates before it instead of under it. */}
+          <bdi class="min-w-0 flex-1 truncate font-medium group-hover/project-container:pe-6 group-focus-within/project-container:pe-6">
+            {displayName(props.project)}
+          </bdi>
           <Icon
             name="chevron-down"
             size="small"
@@ -354,7 +360,7 @@ function ProjectRow(props: {
         data-no-dnd
         aria-label={language.t("sidebar.projects.glyph.title")}
         title={language.t("sidebar.projects.glyph.title")}
-        class="absolute end-7 top-1 flex size-6 items-center justify-center rounded bg-v2-background-bg-base opacity-0 group-hover/project-container:opacity-100 focus-visible:opacity-100"
+        class="absolute end-7 top-1 flex size-6 items-center justify-center rounded-[6px] text-v2-icon-icon-muted opacity-0 hover:bg-v2-overlay-simple-overlay-hover hover:text-v2-icon-icon-base group-hover/project-container:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:bg-v2-overlay-simple-overlay-hover"
         onClick={openGlyph}
       >
         <Icon name="edit" size="small" />
