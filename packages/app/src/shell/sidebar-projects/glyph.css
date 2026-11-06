@@ -1,0 +1,10 @@
+.project-glyph {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: var(--line-height-compact);
+}

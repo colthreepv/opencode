@@ -802,6 +802,7 @@ export const dict = {
   "sidebar.projects.glyph.emoji": "Emoji",
   "sidebar.projects.glyph.color": "Color",
   "sidebar.projects.glyph.reset": "Reset",
+  "sidebar.projects.glyph.noResults": "No matching icons",
   "sidebar.project.recentSessions": "Recent sessions",
   "sidebar.project.clearNotifications": "Clear notifications",
 

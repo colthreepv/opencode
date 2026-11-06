@@ -4,6 +4,7 @@ import { ProjectIcon } from "@/shell/layout/project-icon"
 import type { LocalProject } from "@/shell/state/layout"
 import { glyphBodies, glyphViewBox, isGlyphName } from "./glyphs"
 import { useSidebarProjects, type SidebarProjectsStore } from "./state"
+import "./glyph.css"
 
 type Glyph = SidebarProjectsStore["store"]["glyphs"][string]
 
@@ -41,7 +42,9 @@ export function ProjectGlyph(props: { project: LocalProject; projectKey: string;
           aria-hidden="true"
           style={{
             // The avatar's bg token turns dark in the dark scheme; its border token stays vivid in both.
-            color: color() ? `var(--v2-avatar-border-${getProjectAvatarVariant(color())})` : "var(--v2-text-text-muted)",
+            color: color()
+              ? `var(--v2-avatar-border-${getProjectAvatarVariant(color())})`
+              : "var(--v2-text-text-muted)",
           }}
         >
           <GlyphContent glyph={value()} />

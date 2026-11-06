@@ -1,65 +1,142 @@
-.project-glyph {
-  display: inline-flex;
-  width: 16px;
-  height: 16px;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  line-height: var(--line-height-compact);
-}
 .glyph-picker {
-  display: flex;
-  flex-direction: column;
   gap: 16px;
+  padding: 0 16px 4px;
 }
+
 .glyph-picker-preview {
   display: flex;
+  min-width: 0;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  font-size: 13px;
   font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-compact);
+  color: var(--v2-text-text-base);
 }
-.glyph-picker-label {
+
+.glyph-picker-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 13px;
-  line-height: var(--line-height-compact);
+  gap: 8px;
 }
-.glyph-picker-label input {
-  width: 100%;
-  height: 32px;
-  border: 1px solid var(--v2-border-border-base);
-  border-radius: 6px;
-  background: var(--v2-background-bg-base);
-  color: var(--v2-text-text-base);
-  padding: 0 8px;
-}
+
+/* Six rows of 32px cells, then the grid scrolls. */
 .glyph-picker-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
-  gap: 4px;
-  max-height: 220px;
+  flex: none;
+  grid-template-columns: repeat(auto-fill, 32px);
+  grid-auto-rows: 32px;
+  justify-content: space-between;
+  gap: 2px;
+  max-height: calc(6 * 32px + 5 * 2px);
+  margin-inline: -4px;
+  padding: 2px 4px;
   overflow-y: auto;
 }
-.glyph-picker-grid button,
-.glyph-picker-colors button {
+
+.glyph-picker-empty {
   display: flex;
+  height: 64px;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  font-size: 13px;
+  line-height: var(--line-height-compact);
+  color: var(--v2-text-text-faint);
+}
+
+.glyph-picker-cell {
+  display: flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
   border-radius: 6px;
+  color: var(--v2-icon-icon-base);
+  outline: none;
+  transition: background 85ms ease-out;
+
+  &[aria-pressed="true"] {
+    background: var(--v2-background-bg-layer-03);
+    box-shadow: inset 0 0 0 1px var(--v2-border-border-strong);
+    color: var(--v2-text-text-base);
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 2px var(--v2-border-border-focus);
+  }
 }
-.glyph-picker-grid button:hover,
-.glyph-picker-colors button:hover,
-.glyph-picker-grid button[aria-pressed="true"],
-.glyph-picker-colors button[aria-pressed="true"] {
-  background: var(--v2-overlay-simple-overlay-hover);
-  outline: 1px solid var(--v2-border-border-strong);
+
+@media (hover: hover) {
+  .glyph-picker-cell:not([aria-pressed="true"]):hover {
+    background: var(--v2-overlay-simple-overlay-hover);
+  }
 }
+
+.glyph-picker-row {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.glyph-picker-label {
+  font-size: 13px;
+  line-height: var(--line-height-compact);
+  color: var(--v2-text-text-muted);
+}
+
+.glyph-picker-emoji {
+  width: 72px !important;
+  align-self: auto;
+
+  input {
+    text-align: center;
+  }
+}
+
 .glyph-picker-colors {
   display: flex;
   flex-wrap: wrap;
-  gap: 2px;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.glyph-picker-color {
+  position: relative;
+  display: flex;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  outline: none;
+  transition: box-shadow 120ms ease;
+
+  &:focus-visible,
+  &[aria-pressed="true"] {
+    box-shadow:
+      0 0 0 2px var(--v2-background-bg-layer-01),
+      0 0 0 4px var(--v2-border-border-focus);
+  }
+}
+
+@media (hover: hover) {
+  .glyph-picker-color:not([aria-pressed="true"]):hover {
+    box-shadow:
+      0 0 0 2px var(--v2-background-bg-layer-01),
+      0 0 0 4px var(--v2-border-border-strong);
+  }
+}
+
+.glyph-picker-color-check {
+  position: absolute;
+  color: var(--v2-icon-icon-contrast);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glyph-picker-cell,
+  .glyph-picker-color {
+    transition: none;
+  }
 }
