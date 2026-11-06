@@ -165,7 +165,7 @@ export function ProjectTree() {
           String(source.id),
           group === UNGROUPED ? undefined : group,
           index,
-          groups().find((item) => item.id === UNGROUPED)?.projects,
+          groups().find((item) => item.id === group)?.projects,
         )
       }}
     >

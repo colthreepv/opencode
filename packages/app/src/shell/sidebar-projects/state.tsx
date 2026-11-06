@@ -106,11 +106,23 @@ export function createSidebarProjectsState() {
         (collapsed) => !collapsed,
       )
     },
-    /** Places a project at `index` within a group; an undefined group returns it to Ungrouped. */
-    moveProject(key: string, group: string | undefined, index: number, ungrouped: string[] = []) {
-      const order = (group === undefined ? ungrouped : members(group)).filter((item) => item !== key)
+    /** Places a project at `index`; when provided, visible is the destination's rendered order. */
+    moveProject(key: string, group: string | undefined, index: number, visible?: string[]) {
+      const order = (group === undefined ? (visible ?? []) : members(group)).filter((item) => item !== key)
+      const shown = visible?.filter((item) => item !== key)
+      const next = shown?.[Math.max(0, index)]
+      const previous = shown?.[Math.min(index, shown.length) - 1]
+      // Sortable indices address rendered projects, not members hidden with their server.
+      const position =
+        group === undefined || !shown
+          ? index
+          : next
+            ? order.indexOf(next)
+            : previous
+              ? order.indexOf(previous) + 1
+              : order.length
 
-      order.splice(Math.max(0, Math.min(index, order.length)), 0, key)
+      order.splice(Math.max(0, Math.min(position, order.length)), 0, key)
       setStore(
         produce((draft) => {
           delete draft.placement[key]
