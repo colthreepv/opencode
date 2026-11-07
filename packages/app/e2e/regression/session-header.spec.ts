@@ -116,6 +116,7 @@ for (const direction of ["ltr", "rtl"] as const) {
       "Export…",
       "Pin conversation",
       "Fork conversation",
+      "Copy conversation ID",
       "Archive conversation",
       "Delete…",
     ])
@@ -808,7 +809,8 @@ test.describe("revert", () => {
   })
 })
 
-test("pins, forks, and archives a conversation from the header menu", async ({ page }) => {
+test("pins, forks, and archives a conversation from the header menu", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"])
   await page.setViewportSize({ width: 1440, height: 900 })
   const directory = "C:/OpenCode/Header Actions"
   const sessionID = "ses_header_actions"
@@ -845,9 +847,13 @@ test("pins, forks, and archives a conversation from the header menu", async ({ p
     "Export…",
     "Pin conversation",
     "Fork conversation",
+    "Copy conversation ID",
     "Archive conversation",
     "Delete…",
   ])
+  await menu().getByRole("menuitem", { name: "Copy conversation ID", exact: true }).click()
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(sessionID)
+  await options.click()
   await menu().getByRole("menuitem", { name: "Pin conversation", exact: true }).click()
   await expect
     .poll(() =>

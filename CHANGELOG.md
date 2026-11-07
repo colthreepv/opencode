@@ -2,6 +2,11 @@
 
 Release notes for this Projects sidebar fork, followed by the upstream OpenCode V2 changelog.
 
+## Unreleased
+
+- Added **Copy conversation ID** to the conversation's right-click menu and header **…** menu. Copies the full
+  session ID without opening the conversation, with success/error feedback and a fallback for plain HTTP origins.
+
 ## v2.2.5-sidebar.3 — 2026-11-07
 
 Independent fork release based on official OpenCode **v2.2.5**. The bundled CLI and server API are unchanged.

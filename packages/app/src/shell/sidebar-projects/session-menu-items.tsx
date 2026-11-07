@@ -50,6 +50,10 @@ export function SessionProjectMenuItems(props: { session: SessionInfo | undefine
             <Icon name="branch" />
             {language.t("sidebar.projects.fork")}
           </Menu.Item>
+          <Menu.Item onSelect={() => void actions.copyID(entry())}>
+            <Icon name="copy" />
+            {language.t("sidebar.projects.copyID")}
+          </Menu.Item>
           <Menu.Item disabled={actions.pending(entry())} onSelect={() => void actions.archive(entry())}>
             <Icon name="archive" />
             {language.t(

@@ -137,6 +137,9 @@ export function SessionRow(props: { entry: InboxEntry; worktree: string; selecte
             <ContextMenu.Item disabled={pending()} onSelect={() => void actions.fork(props.entry)}>
               {language.t("sidebar.projects.fork")}
             </ContextMenu.Item>
+            <ContextMenu.Item onSelect={() => void actions.copyID(props.entry)}>
+              {language.t("sidebar.projects.copyID")}
+            </ContextMenu.Item>
             <ContextMenu.Separator />
             <ContextMenu.Item disabled={pending()} onSelect={toggleArchive}>
               {archiveLabel()}

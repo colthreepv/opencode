@@ -803,6 +803,7 @@ export const dict = {
   "sidebar.projects.pin": "Pin conversation",
   "sidebar.projects.unpin": "Unpin conversation",
   "sidebar.projects.fork": "Fork conversation",
+  "sidebar.projects.copyID": "Copy conversation ID",
   "sidebar.projects.archive": "Archive conversation",
   "sidebar.projects.unarchive": "Unarchive conversation",
   "sidebar.projects.dock.label": "Live sessions",

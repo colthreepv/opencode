@@ -115,7 +115,8 @@ test("shows only the groups and projects that hold archived conversations and pa
   await expect(sidebar.session("Archived conversation 0")).toHaveCount(0)
 })
 
-test("opens session actions from the context menu and hover, and keeps the dock live", async ({ page }) => {
+test("opens session actions from the context menu and hover, and keeps the dock live", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"])
   await page.setViewportSize({ width: 1440, height: 900 })
   const directory = "C:/OpenCode/Session Actions"
   const patches: unknown[] = []
@@ -144,9 +145,12 @@ test("opens session actions from the context menu and hover, and keeps the dock 
     "Open",
     "Pin conversation",
     "Fork conversation",
+    "Copy conversation ID",
     "Archive conversation",
   ])
-  await page.keyboard.press("Escape")
+  await menu.getByRole("menuitem", { name: "Copy conversation ID", exact: true }).click()
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe("ses_actions_idle")
+  await expect(page.getByText("Copied", { exact: true })).toBeVisible()
   await expect(idle).toBeFocused()
   await idle.press("Shift+F10")
   await menu.getByRole("menuitem", { name: "Pin conversation", exact: true }).click()

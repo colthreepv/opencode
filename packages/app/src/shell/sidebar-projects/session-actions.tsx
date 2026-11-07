@@ -6,10 +6,12 @@ import { notifySessionTabsRemoved } from "@/shell/titlebar/session-events"
 import type { InboxEntry } from "@/shell/titlebar/inbox-model"
 import { errorMessage } from "@/shell/layout/helpers"
 import { showToast } from "@/shell/notifications/toast"
+import { usePlatform } from "@/runtime/platform/platform"
 
 /** Full-history forks and reversible archival, shared by the tree and the conversation header. */
 export function useProjectSessionActions() {
   const language = useLanguage()
+  const platform = usePlatform()
   const tabs = useTabs()
   const queries = useQueryClient()
   const [store, setStore] = createStore<{ pending: Record<string, boolean> }>({ pending: {} })
@@ -38,6 +40,44 @@ export function useProjectSessionActions() {
 
   return {
     pending: (entry: InboxEntry) => !!store.pending[entry.key],
+    copyID: (entry: InboxEntry) =>
+      Promise.resolve()
+        .then(() => {
+          if (platform.writeClipboardText) return platform.writeClipboardText(entry.session.id)
+
+          if (navigator.clipboard) return navigator.clipboard.writeText(entry.session.id)
+
+          // Clipboard API is unavailable on plain HTTP LAN origins. Keep copying usable there too.
+          const focused = document.activeElement
+          const field = document.createElement("textarea")
+          field.value = entry.session.id
+          field.style.position = "fixed"
+          field.style.opacity = "0"
+          document.body.append(field)
+          field.select()
+          const copied = document.execCommand("copy")
+
+          field.remove()
+
+          if (focused instanceof HTMLElement) focused.focus({ preventScroll: true })
+
+          if (!copied) throw new Error(language.t("toast.session.copyID.failed.description"))
+        })
+        .then(() =>
+          showToast({
+            variant: "success",
+            icon: "circle-check",
+            title: language.t("common.copied"),
+            description: entry.session.id,
+          }),
+        )
+        .catch((cause) =>
+          showToast({
+            variant: "error",
+            title: language.t("toast.session.copyID.failed.title"),
+            description: errorMessage(cause, language.t("toast.session.copyID.failed.description")),
+          }),
+        ),
     fork: (entry: InboxEntry) =>
       request(entry, async () => {
         // No `before`: copy through the current end, rather than restoring a user prompt into the composer.
