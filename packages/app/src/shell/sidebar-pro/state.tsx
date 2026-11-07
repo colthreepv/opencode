@@ -1,11 +1,13 @@
 import { Schema } from "effect"
 import type { SessionInfo } from "@opencode/client/promise"
-import { createContext, useContext, type ParentProps } from "solid-js"
+import { createContext, createEffect, on, useContext, type ParentProps } from "solid-js"
 import { produce } from "solid-js/store"
 import { uuid } from "@opencode/util/uuid"
 import { Persistence } from "@/runtime/persistence/schema"
 import { Persist, persisted } from "@/runtime/persistence/storage"
 import type { ServerConnection } from "@/runtime/server/registry"
+import { useGlobal } from "@/runtime/server/runtime"
+import { useLayout } from "@/shell/state/layout"
 import { createSessionInbox, type SessionInbox } from "@/shell/titlebar/inbox-model"
 import { pathKey } from "@/workspaces/path-key"
 
@@ -32,6 +34,7 @@ const SidebarProState = Persistence.struct({
   expanded: Persistence.record(Schema.Literal(true)),
   hidden: Persistence.record(Schema.Literal(true)),
   pins: Persistence.record(Schema.String),
+  unread: Persistence.record(Schema.Literal(true)),
   archived: Schema.Boolean,
   shown: Persistence.record(Schema.Finite),
   dock: Persistence.struct({
@@ -57,6 +60,7 @@ export function createSidebarProState() {
     expanded: {},
     hidden: {},
     pins: {},
+    unread: {},
     archived: false,
     shown: {},
     dock: { attentionCollapsed: false },
@@ -185,6 +189,19 @@ export function createSidebarProState() {
       )
     },
     pinned: (server: ServerConnection.Key, sessionID: string) => !!store.pins[`${server}\0${sessionID}`],
+    unread: (server: ServerConnection.Key, sessionID: string) => !!store.unread[`${server}\0${sessionID}`],
+    markUnread(server: ServerConnection.Key, sessionID: string) {
+      if (!ready()) return
+      setStore("unread", `${server}\0${sessionID}`, true)
+    },
+    clearUnread(server: ServerConnection.Key, sessionID: string) {
+      if (!ready() || !store.unread[`${server}\0${sessionID}`]) return
+      setStore(
+        produce((draft) => {
+          delete draft.unread[`${server}\0${sessionID}`]
+        }),
+      )
+    },
     togglePin(server: ServerConnection.Key, session: SessionInfo, worktree = session.location.directory) {
       if (!ready()) return
       const key = `${server}\0${session.id}`
@@ -216,6 +233,31 @@ const SidebarProStateContext = createContext<SidebarProStore>()
 /** Preferences are shared with conversation-header actions, without starting an inbox in other interface modes. */
 export function SidebarProStateProvider(props: ParentProps) {
   const state = createSidebarProState()
+  const layout = useLayout()
+  const global = useGlobal()
+
+  // Clear on entering a conversation from any surface, not on changes to its unread reminder.
+  // In particular, marking the currently open conversation unread must survive until the next opening.
+  createEffect(
+    on(
+      () => {
+        const route = layout.route()
+
+        return state.ready() && route.type === "session" ? `${route.server}\0${route.sessionId}` : undefined
+      },
+      (key) => {
+        if (!key) return
+        const route = layout.route()
+
+        if (route.type !== "session") return
+        state.clearUnread(route.server, route.sessionId)
+        const ctx = global.serverCtx(route.server)
+
+        if (ctx) state.clearUnread(route.server, ctx.data.session.root(route.sessionId))
+      },
+    ),
+  )
+
   return <SidebarProStateContext.Provider value={state}>{props.children}</SidebarProStateContext.Provider>
 }
 

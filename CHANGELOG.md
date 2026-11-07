@@ -6,6 +6,10 @@ Release notes for this Sidebar Pro fork, followed by the upstream OpenCode V2 ch
 
 - Updated the maintained Sidebar Pro branch to official OpenCode **v2.2.6**, preserving fork preferences, the live
   Dock, and attach-only discovery of an existing shared background service. Release binaries remain a separate build.
+- Kept existing conversation rows in a stable order while any root in their project is working or waiting for
+  approval/input. New conversations appear at the top of their pinned/unpinned section; membership and pin/archive
+  changes remain immediate. When the whole project is idle, both sections return to last-update order. The Dock's
+  run-start ordering is unchanged, and no ordering cache is persisted.
 - Renamed the fork to **Sidebar Pro**. This is a branding change only: release tag names, installer identity and
   persisted client preferences keep their existing identifiers. The `sidebar-projects` storage key and the internal
   `projects` interface-mode value are unchanged, so existing settings continue to apply. The maintained branch is now
@@ -14,6 +18,9 @@ Release notes for this Sidebar Pro fork, followed by the upstream OpenCode V2 ch
   session ID without opening the conversation, with success/error feedback and a fallback for plain HTTP origins.
 - Added **Copy conversation reference** to both menus, using OpenCode's existing `@session:ses_…` mentions without
   attaching conversation history or changing the server API.
+- Added persistent client-local **Mark as unread / Mark as read** actions. Opening a conversation clears its manual
+  reminder, including navigation from outside the sidebar. Mark as read also acknowledges the existing server unread
+  result. Working, Completing, approval and input status retain priority; manual reminders do not invent a Dock outcome.
 - Moved the feature source to `shell/sidebar-pro` and renamed its symbols, while preserving storage and DOM contracts.
 - Made the upstream compatibility watcher run every six hours and removed its branch-name gate, avoiding silent skips
   after renames. GitHub can delay or drop schedule events; a manual compatibility probe remains available.
