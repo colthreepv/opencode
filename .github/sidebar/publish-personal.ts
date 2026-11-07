@@ -92,7 +92,7 @@ Includes Sidebar Pro, stable conversation ordering, read/unread reminders, indep
 - **RPM Linux x64:** install \`opencode-personal-linux-x86_64.rpm\` with your package manager.
 - **Portable Linux x64:** \`chmod +x opencode-personal-linux-x86_64.AppImage\`, then run it.
 
-The app is named **OpenCode Dev**, with a separate identity and automatic updater disabled. Packages update an existing installation with that identity.
+The app is named **OpenCode Personal**, with a red icon and the separate identity \`ai.opencode.desktop.personal\`. Automatic updates are disabled. This identity has its own desktop preferences/profile; conversations remain on the shared service. Packages update an existing installation with this identity.
 
 Source: [\`${run.head_sha.slice(0, 10)}\`](https://github.com/${repository}/commit/${run.head_sha}) · [Windows/Linux build](https://github.com/${repository}/actions/runs/${runID})
 

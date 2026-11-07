@@ -41,7 +41,7 @@ function resolveChannel() {
 }
 
 const APP_IDS = {
-  dev: "ai.opencode.desktop.dev",
+  dev: "ai.opencode.desktop.personal",
   beta: "ai.opencode.desktop.beta",
   prod: "ai.opencode.desktop",
 } as const
@@ -218,15 +218,15 @@ export function getConfig() {
       return {
         ...base,
         appId,
-        productName: "OpenCode Dev",
+        productName: "OpenCode Personal",
         publish: {
           provider: "generic",
           url: "https://opencode.ai/update/api/dev/desktop/opencode/",
           channel: "latest",
         },
-        deb: { fpm: [...previewCompressionFpm("deb"), metainfoFpm(appId)] },
+        deb: { packageName: "opencode-personal", fpm: [...previewCompressionFpm("deb"), metainfoFpm(appId)] },
         rpm: {
-          packageName: "opencode-dev",
+          packageName: "opencode-personal",
           fpm: [rpmNoBuildIdLinksFpm, ...previewCompressionFpm("rpm"), metainfoFpm(appId)],
         },
       }

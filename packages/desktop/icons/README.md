@@ -1,5 +1,8 @@
 # Tauri Icons
 
+The `personal` Windows/Linux set preserves the dev icon's geometry and alpha, with its hue rotated by 140 degrees
+using FFmpeg (`-vf hue=h=140`). It includes the desktop PNG sizes and a PNG-compressed 256px Windows ICO.
+
 Here's the process I've been using to create icons:
 
 - Save source image as `app-icon.png` in `packages/desktop`

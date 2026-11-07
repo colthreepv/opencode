@@ -13,9 +13,9 @@ import { CLI_BINARIES, nodePtyPackage } from "./script/utils"
 const { FileMatcher } = createRequire(import.meta.resolve("electron-builder"))("app-builder-lib/out/fileMatcher")
 
 const channels = [
-  { channel: "dev", appId: "ai.opencode.desktop.dev", feed: "dev" },
-  { channel: "beta", appId: "ai.opencode.desktop.beta", feed: "beta" },
-  { channel: "prod", appId: "ai.opencode.desktop", feed: "latest" },
+  { channel: "dev", appId: "ai.opencode.desktop.personal", feed: "dev", name: "OpenCode Personal" },
+  { channel: "beta", appId: "ai.opencode.desktop.beta", feed: "beta", name: "OpenCode Beta" },
+  { channel: "prod", appId: "ai.opencode.desktop", feed: "latest", name: "OpenCode" },
 ] as const
 
 function load(channel: string, target?: string): Configuration {
@@ -47,9 +47,14 @@ function trimFilter(dir: string, config: Configuration) {
   ]).createFilter()
 }
 
-test.each(channels)("channel identity for $channel", ({ channel, appId, feed }) => {
+test.each(channels)("channel identity for $channel", ({ channel, appId, feed, name }) => {
   const config = load(channel)
   expect(config.appId).toBe(appId)
+  expect(config.productName).toBe(name)
+  if (channel === "dev") {
+    expect(config.deb?.packageName).toBe("opencode-personal")
+    expect(config.rpm?.packageName).toBe("opencode-personal")
+  }
   // Every published channel updates from its own feed on the update service.
   expect(config.publish).toEqual({
     provider: "generic",

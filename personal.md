@@ -29,6 +29,10 @@ Do not change the fork's default branch.
 
 ## Verify and build
 
+Personal packages use **OpenCode Personal**, app ID `ai.opencode.desktop.personal`, and the red icons in
+`packages/desktop/icons/personal`. The technical channel remains `dev` for the existing service/updater policy.
+The desktop profile is separate from older OpenCode Dev builds; conversations stay on the shared service.
+
 1. Use a clean checkout of `personal`, then `bun install --frozen-lockfile`.
 2. Run `bun run check` at the repository root and relevant package tests from their package directories.
 3. Push to `personal` to automatically build and publish the Windows x64 installer and Linux x64 AppImage/deb/rpm.
