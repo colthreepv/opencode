@@ -30,16 +30,17 @@ const JsonPayload = Schema.Unknown.pipe(HttpApiSchema.asJson())
 const Query = Schema.Struct({
   directory: Schema.optional(Schema.String),
   parentID: Schema.optional(Schema.String),
+  archived: Schema.optional(Schema.String),
   search: Schema.optional(Schema.String),
   order: Schema.optional(Schema.String),
   project: Schema.optional(Schema.String),
-  archived: Schema.optional(Schema.String),
   cursor: Schema.optional(Schema.String),
   limit: Schema.optional(Schema.NumberFromString),
   path: Schema.optional(Schema.String),
   query: Schema.optional(Schema.String),
   type: Schema.optional(Schema.String),
   mode: Schema.optional(Schema.String),
+  context: Schema.optional(Schema.String),
 })
 
 const SessionParams = { sessionID: Schema.String }
@@ -132,6 +133,7 @@ const Group = HttpApiGroup.make("mock")
       params: { integrationID: Schema.String },
       payload: JsonPayload,
       success: NoContent,
+      error: MockBadRequest.pipe(HttpApiSchema.status(400)),
     }),
   )
   .add(
@@ -147,6 +149,31 @@ const Group = HttpApiGroup.make("mock")
       params: { integrationID: Schema.String, attemptID: Schema.String },
       success: Json,
       error: MockNotFound.pipe(HttpApiSchema.status(404)),
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post(
+      "integrationOAuthComplete",
+      "/api/integration/:integrationID/connect/oauth/:attemptID/complete",
+      {
+        params: { integrationID: Schema.String, attemptID: Schema.String },
+        payload: JsonPayload,
+        success: NoContent,
+        error: Unsupported,
+      },
+    ),
+  )
+  .add(
+    HttpApiEndpoint.delete("integrationOAuthCancel", "/api/integration/:integrationID/connect/oauth/:attemptID", {
+      params: { integrationID: Schema.String, attemptID: Schema.String },
+      success: NoContent,
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("integrationConnectExternal", "/api/integration/:integrationID/connect/external", {
+      params: { integrationID: Schema.String },
+      payload: JsonPayload,
+      success: NoContent,
     }),
   )
   .add(
@@ -186,7 +213,12 @@ const Group = HttpApiGroup.make("mock")
       error: MockNotFound.pipe(HttpApiSchema.status(404)),
     }),
   )
-  .add(HttpApiEndpoint.get("mcpResource", "/api/mcp/resource", { success: Json }))
+  .add(
+    HttpApiEndpoint.get("mcpResource", "/api/mcp/resource", {
+      success: Json,
+      error: MockInternal.pipe(HttpApiSchema.status(500)),
+    }),
+  )
   .add(HttpApiEndpoint.get("projectList", "/api/project", { success: Json }))
   .add(
     HttpApiEndpoint.patch("projectUpdate", "/api/project/:projectID", {
@@ -277,7 +309,7 @@ const Group = HttpApiGroup.make("mock")
     HttpApiEndpoint.get("persistentPtyList", "/api/experimental/session/:sessionID/terminal", {
       params: SessionParams,
       success: Json,
-      error: PersistentPtyUnavailable,
+      error: [PersistentPtyUnavailable, MockInternal.pipe(HttpApiSchema.status(500))],
     }),
   )
   .add(

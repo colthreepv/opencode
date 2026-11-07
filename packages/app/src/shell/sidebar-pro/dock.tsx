@@ -98,7 +98,7 @@ export function Dock() {
             <DockRow
               entry={entry()}
               selected={inbox.selected(entry())}
-              now={inbox.now()}
+              now={inbox.now(entry().status)}
               onOpen={() => {
                 sidebar.state.clearUnread(entry().server, entry().session.id)
                 inbox.open(entry())

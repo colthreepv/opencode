@@ -1,4 +1,4 @@
-import { For, type ParentProps } from "solid-js"
+import { For } from "solid-js"
 import "./preview.css"
 
 // A group heading, its projects with one expanded, then a second group.
@@ -17,41 +17,38 @@ const dock = [
   { width: 50, status: "working" },
 ] as const
 
-/** Settings > Interface preview of the Projects mode; the shared workspace drawing comes in as children. */
-export function SidebarProPreview(props: ParentProps) {
+/** Compact project tree and live Dock inside the shared Settings > Interface sketch. */
+export function SidebarProPreview() {
   return (
-    <div data-slot="preview-body">
-      <div data-slot="preview-rail" data-variant="projects">
-        <div data-slot="preview-tree">
-          <For each={tree}>
-            {(row) =>
-              row.kind === "heading" ? (
-                <span data-slot="preview-rail-heading" />
-              ) : (
-                <span
-                  data-slot="preview-tab"
-                  data-indent={row.kind === "session" ? "" : undefined}
-                  data-active={"active" in row ? "" : undefined}
-                >
-                  <i data-kind={row.kind} />
-                  <span style={{ width: `${row.width}%` }} />
-                </span>
-              )
-            }
-          </For>
-        </div>
-        <div data-slot="preview-dock">
-          <For each={dock}>
-            {(row) => (
-              <span data-slot="preview-tab">
-                <i data-status={row.status} />
+    <span data-slot="preview-rail" data-variant="projects">
+      <span data-slot="preview-tree">
+        <For each={tree}>
+          {(row) =>
+            row.kind === "heading" ? (
+              <span data-slot="preview-rail-heading" />
+            ) : (
+              <span
+                data-slot="preview-tab"
+                data-indent={row.kind === "session" ? "" : undefined}
+                data-active={"active" in row ? "" : undefined}
+              >
+                <i data-kind={row.kind} />
                 <span style={{ width: `${row.width}%` }} />
               </span>
-            )}
-          </For>
-        </div>
-      </div>
-      {props.children}
-    </div>
+            )
+          }
+        </For>
+      </span>
+      <span data-slot="preview-dock">
+        <For each={dock}>
+          {(row) => (
+            <span data-slot="preview-tab">
+              <i data-status={row.status} />
+              <span style={{ width: `${row.width}%` }} />
+            </span>
+          )}
+        </For>
+      </span>
+    </span>
   )
 }

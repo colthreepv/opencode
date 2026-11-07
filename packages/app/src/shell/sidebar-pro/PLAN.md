@@ -1,7 +1,7 @@
 # Sidebar Pro (fork feature)
 
-Fork: `colthreepv/opencode`, branch `sidebar-pro`, rebased onto every upstream release tag
-(`upstream` = `anomalyco/opencode`). Started from `v2.2.5`.
+Fork: `colthreepv/opencode`, branch `sidebar-pro`, maintained against accepted stable upstream release tags
+(`upstream` = `anomalyco/opencode`). Started from `v2.2.5`; current base is `v2.2.6`.
 
 A fourth interface mode, **Sidebar Pro** (internal value `projects`), beside Top tabs / Side tabs / Inbox: a Codex-style project tree on top
 and a Dock with live session state at the bottom.
@@ -154,11 +154,11 @@ service/data; client-local preferences, tabs and project selections remain separ
 client as needed; choose **Settings > General > Interface mode > Sidebar Pro**.
 
 If the official app advances to `2.2.6`, the fork still attaches without downgrading/restarting its service.
-Client/API incompatibility remains possible: rebase onto that release and rebuild to update renderer and
+Client/API incompatibility remains possible: integrate that stable release and rebuild to update renderer and
 bundled fallback CLI. If no service is registered, an old fork can start its bundled old CLI; rebuild before
 using that fallback after an official update. Do not use service stop/restart to test this build.
 
-## Rebase on release
+## Update on release
 
 ### Shimmer policy (user preference)
 
@@ -174,5 +174,6 @@ using that fallback after an official update. Do not use service stop/restart to
 
 ```
 git fetch upstream --tags
-git rebase --onto vX.Y.Z <previous-base-tag> sidebar-pro
+git switch sidebar-pro
+git merge --no-ff vX.Y.Z
 ```

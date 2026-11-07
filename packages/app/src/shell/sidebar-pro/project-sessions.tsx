@@ -34,9 +34,11 @@ export function ProjectSessions(props: {
   const item = createMemo(() => {
     const conn = servers.visible.find((value) => ServerConnection.key(value) === props.server)
 
-    if (!conn) return
+    const ctx = global.serverCtx(props.server)
 
-    return { conn, key: props.id, server: props.server, ctx: global.ensureServerCtx(conn), project: props.project }
+    if (!conn || !ctx) return
+
+    return { conn, key: props.id, server: props.server, ctx, project: props.project }
   })
 
   const pages = createProjectPages({ item, archived: () => props.archived })
@@ -64,7 +66,17 @@ export function ProjectSessions(props: {
             )
               return []
 
-            return [{ key, conn: current.conn, server: props.server, ctx: current.ctx, session, status: "ready" }]
+            return [
+              {
+                key,
+                conn: current.conn,
+                server: props.server,
+                ctx: current.ctx,
+                session,
+                status: "ready",
+                since: undefined,
+              },
+            ]
           })
       : []
 

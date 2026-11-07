@@ -84,8 +84,8 @@ export function GlyphPicker(props: { project: LocalProject; server: ServerConnec
       </DialogHeader>
       <DialogBody class="glyph-picker">
         <div class="glyph-picker-preview">
-          <ProjectGlyph project={props.project} projectKey={props.projectKey} color={model.store.color} />
-          <bdi class="min-w-0 truncate">{model.store.name || displayName(props.project)}</bdi>
+          <ProjectGlyph project={props.project} projectKey={props.projectKey} color={model.view().color} />
+          <bdi class="min-w-0 truncate">{model.view().name || displayName(props.project)}</bdi>
         </div>
         <label class="glyph-picker-field">
           <span class="glyph-picker-label">{language.t("project.settings.name.title")}</span>
@@ -94,10 +94,10 @@ export function GlyphPicker(props: { project: LocalProject; server: ServerConnec
             appearance="base"
             class="glyph-picker-name"
             dir="auto"
-            value={model.store.name}
-            placeholder={model.folderName()}
+            value={model.view().name}
+            placeholder={model.view().folderName}
             aria-label={language.t("project.settings.name.title")}
-            onInput={(event) => model.setStore("name", event.currentTarget.value)}
+            onInput={(event) => model.editName(event.currentTarget.value)}
             onBlur={model.saveName}
             onKeyDown={(event) => {
               if (event.key !== "Enter" || event.isComposing) return
@@ -169,7 +169,7 @@ export function GlyphPicker(props: { project: LocalProject; server: ServerConnec
           <div class="glyph-picker-colors">
             <For each={PROJECT_AVATAR_VARIANTS}>
               {(color) => {
-                const active = () => !!model.store.color && getProjectAvatarVariant(model.store.color) === color
+                const active = () => !!model.view().color && getProjectAvatarVariant(model.view().color) === color
 
                 return (
                   <button

@@ -50,10 +50,11 @@ export function ProjectTree() {
   const connections = createMemo(
     () =>
       new Map(
-        servers.visible.map((conn) => {
+        servers.visible.flatMap((conn) => {
           const server = ServerConnection.key(conn)
+          const ctx = global.serverCtx(server)
 
-          return [String(server), { conn, server, ctx: global.ensureServerCtx(conn) }] as const
+          return ctx ? [[String(server), { conn, server, ctx }] as const] : []
         }),
       ),
   )
@@ -88,7 +89,7 @@ export function ProjectTree() {
 
         const entry: InboxEntry = known
           ? { ...known, session }
-          : { key, conn: item.conn, server: item.server, ctx: item.ctx, session, status: "ready" }
+          : { key, conn: item.conn, server: item.server, ctx: item.ctx, session, status: "ready", since: undefined }
 
         return [{ key: projectKey(item.server, project.worktree), project, entry }]
       }),
