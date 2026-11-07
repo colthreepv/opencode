@@ -84,6 +84,16 @@ row when possible, keeps Ongoing's heading visible, and scrolls each section ind
 Projects without placement render in an implicit trailing "Ungrouped" group (its heading shows only once user
 groups exist; it is not collapsible).
 
+### Conversation order while a project is busy
+
+`session-order-machine.ts` keeps each expanded project's pinned and unpinned relative order stable while any root in
+that project has `inboxBusy` status (Working/Completing, approval or input), including roots outside the visible five.
+Membership is never frozen: new/discovered roots and rows entering a section lead it, while archive, deletion, moves
+and pin changes reconcile immediately. All pins remain visible and Show more still adds five unpinned rows.
+Once every root is idle, both sections resume descending `time.updated` order. Archive mode starts its own list order;
+the Dock retains its existing run-start ordering. This state is ephemeral, scoped to the mounted project list, and
+does not change the persistent preferences or server API.
+
 ## Files
 
 - `sidebar-pro.tsx` — `SidebarPro`, provider and hydration gate.

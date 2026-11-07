@@ -14,7 +14,8 @@ inspired by Codex. Independent project; not built by or affiliated with the Open
 - **Project actions:** edit the display name, icon and colour; start a session with `+`, or hide a project from the sidebar
   and restore it from the toolbar's **… → Hidden projects** menu. Hiding never deletes its files or conversations.
 - **Nested conversations and pins:** pinned conversations stay above the newest five unpinned sessions per project,
-  with **Show more** for older sessions. Each set is ordered by its last update.
+  with **Show more** for older sessions. Each set is ordered by its last update when the project is idle. While any
+  conversation is working or waiting for approval/input, existing rows stay put; new conversations lead their section.
 - **Archived conversations:** toggle **Archived** in the compact toolbar to browse and restore history by group
   and project. Empty groups disappear, older pages remain reachable, and the live Dock stays put.
 - **Conversation actions:** Pin and Archive on hover/focus; right-click or **Shift+F10** for the full menu, including
