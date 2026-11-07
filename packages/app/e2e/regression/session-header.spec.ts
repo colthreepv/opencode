@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test"
 import { REMOTE_SERVER, SERVER, seed, sessionHref } from "../utils/app"
 import { fixture, mockStressTimeline } from "../utils/session-fixture"
 import { reviewTabs } from "../utils/side-panel"
-import { pinnedSession, SIDEBAR_PROJECTS_STORAGE } from "../utils/sidebar-projects"
+import { pinnedSession } from "../utils/sidebar-projects"
 import { chooseUserMessageAction, openUserMessageMenu } from "../utils/timeline"
 import { expectSessionTitle } from "../utils/waits"
 import { mockRemoteServer, mockWorkspace, openSession } from "../utils/workspace"
@@ -119,7 +119,6 @@ for (const direction of ["ltr", "rtl"] as const) {
       "Fork conversation",
       "Copy conversation ID",
       "Copy conversation reference",
-      "Mark as unread",
       "Archive conversation",
       "Delete…",
     ])
@@ -936,7 +935,6 @@ test("pins, forks, and archives a conversation from the header menu", async ({ p
     "Fork conversation",
     "Copy conversation ID",
     "Copy conversation reference",
-    "Mark as unread",
     "Archive conversation",
     "Delete…",
   ])
@@ -977,47 +975,4 @@ test("pins, forks, and archives a conversation from the header menu", async ({ p
   await menu().getByRole("menuitem", { name: "Archive conversation", exact: true }).click()
   expect((await archived).ok()).toBe(true)
   expect(patches).toEqual([{ archived: true }])
-})
-
-test("marks the open conversation unread until it is reopened, then clears it from the header menu", async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 1440, height: 900 })
-  const directory = "C:/OpenCode/Header Unread"
-  const sessionID = "ses_header_unread"
-  const key = `${SERVER}\0${sessionID}`
-
-  const unread = () =>
-    page.evaluate((storage) => {
-      const stored = JSON.parse(localStorage.getItem(storage) ?? "{}")
-
-      return stored.unread ?? {}
-    }, SIDEBAR_PROJECTS_STORAGE)
-
-  await openSession(page, {
-    name: "Header Unread",
-    directory,
-    sessions: [{ id: sessionID, title: "Header unread", directory }],
-  })
-
-  const header = page.locator("[data-session-title]")
-  const options = header.getByRole("button", { name: "More options", exact: true })
-  const menu = () => page.getByRole("menu").filter({ has: page.getByRole("menuitem", { name: "Rename", exact: true }) })
-
-  // The conversation is already open, so its new mark must stay until the next opening.
-  await options.click()
-  await menu().getByRole("menuitem", { name: "Mark as unread", exact: true }).click()
-  await expect.poll(unread).toEqual({ [key]: true })
-  await options.click()
-  await expect(menu().getByRole("menuitem", { name: "Mark as read", exact: true })).toBeVisible()
-  await menu().getByRole("menuitem", { name: "Mark as read", exact: true }).click()
-  await expect.poll(unread).toEqual({})
-
-  // Mark it again; reopening the conversation now clears it.
-  await options.click()
-  await menu().getByRole("menuitem", { name: "Mark as unread", exact: true }).click()
-  await expect.poll(unread).toEqual({ [key]: true })
-  await page.reload()
-  await expectSessionTitle(page, "Header unread")
-  await expect.poll(unread).toEqual({})
 })

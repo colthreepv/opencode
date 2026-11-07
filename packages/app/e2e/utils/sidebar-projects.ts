@@ -77,8 +77,7 @@ export function sidebarProjects(page: Page) {
   const tree = root.locator('[data-slot="sidebar-projects-tree"]')
   const sessions = tree.locator('[data-slot="sidebar-projects-session-item"]')
   const items = sessions
-  // The row's accessible name gains a trailing "Unread" while its local or server-side unread mark is set.
-  const name = (title: string) => new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?: Unread)?$`)
+  const name = (title: string) => new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`)
   const session = (title: string) => tree.getByRole("treeitem", { name: name(title) })
 
   const row = (title: string) => items.filter({ has: page.getByRole("treeitem", { name: name(title) }) })

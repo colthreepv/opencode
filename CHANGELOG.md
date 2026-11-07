@@ -14,9 +14,6 @@ Release notes for this Sidebar Pro fork, followed by the upstream OpenCode V2 ch
   session ID without opening the conversation, with success/error feedback and a fallback for plain HTTP origins.
 - Added **Copy conversation reference** to both menus, using OpenCode's existing `@session:ses_…` mentions without
   attaching conversation history or changing the server API.
-- Added persistent client-local **Mark as unread / Mark as read** actions. Opening a conversation clears its manual
-  reminder, including navigation from outside the sidebar. Mark as read also acknowledges the existing server unread
-  result. Working, Completing, approval and input status retain priority; manual reminders do not invent a Dock outcome.
 - Moved the feature source to `shell/sidebar-pro` and renamed its symbols, while preserving storage and DOM contracts.
 - Made the upstream compatibility watcher run every six hours and removed its branch-name gate, avoiding silent skips
   after renames. GitHub can delay or drop schedule events; a manual compatibility probe remains available.

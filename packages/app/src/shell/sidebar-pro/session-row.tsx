@@ -45,8 +45,7 @@ export function SessionRow(props: { entry: InboxEntry; worktree: string; selecte
   })
 
   const status = () => props.entry.status
-  const unread = () => actions.unread(props.entry)
-  const emphasized = () => unread() || props.selected || status() === "approval" || status() === "input"
+  const unread = () => status() !== "ready" && status() !== "working"
   const pinned = () => sidebar.state.pinned(props.entry.server, props.entry.session.id)
   const archived = () => inboxArchived(props.entry)
   const pending = () => actions.pending(props.entry)
@@ -74,10 +73,7 @@ export function SessionRow(props: { entry: InboxEntry; worktree: string; selecte
           data-state={props.selected ? "active" : undefined}
           aria-current={props.selected ? "page" : undefined}
           class="relative flex h-7 w-full shrink-0 items-center gap-1.5 rounded-[6px] ps-[30px] pe-1.5 text-start text-[13px] leading-4 hover:bg-v2-overlay-simple-overlay-hover focus-visible:outline-none focus-visible:bg-v2-overlay-simple-overlay-hover data-[state=active]:bg-v2-background-bg-layer-02"
-          onClick={() => {
-            actions.markRead(props.entry)
-            props.onOpen()
-          }}
+          onClick={props.onOpen}
           onKeyDown={openContextMenuFromKeyboard}
         >
           <Show when={pinned()}>
@@ -91,8 +87,8 @@ export function SessionRow(props: { entry: InboxEntry; worktree: string; selecte
             class="min-w-0 flex-1 truncate group-hover/session:pe-11 group-focus-within/session:pe-11"
             // Rows recede once read so unread results stand out, as in the inbox.
             classList={{
-              "font-medium text-v2-text-text-base": emphasized(),
-              "text-v2-text-text-muted": !emphasized(),
+              "font-medium text-v2-text-text-base": unread() || props.selected,
+              "text-v2-text-text-muted": !unread() && !props.selected,
             }}
           >
             {sessionTabTitle(props.entry.session.title, language.t("session.tab.session"))}
@@ -118,14 +114,14 @@ export function SessionRow(props: { entry: InboxEntry; worktree: string; selecte
                   />
                 </Show>
               </Match>
-              <Match when={status() !== "ready" || unread()}>
+              <Match when={status() !== "ready"}>
                 <span class="flex size-4 shrink-0 items-center justify-center" aria-hidden="true">
                   <span
                     class="size-[7px] rounded-full"
                     classList={{
                       "bg-v2-state-fg-warning": status() === "approval" || status() === "input",
                       "bg-v2-state-fg-danger": status() === "failed",
-                      "bg-v2-background-bg-accent": status() === "done" || status() === "ready",
+                      "bg-v2-background-bg-accent": status() === "done",
                     }}
                   />
                 </span>
@@ -133,20 +129,10 @@ export function SessionRow(props: { entry: InboxEntry; worktree: string; selecte
             </Switch>
           </span>
           <span class="sr-only">{label()}</span>
-          <Show when={unread()}>
-            <span class="sr-only"> {language.t("sidebar.projects.unread")}</span>
-          </Show>
         </ContextMenu.Trigger>
         <ContextMenu.Portal>
           <ContextMenu.Content>
-            <ContextMenu.Item
-              onSelect={() => {
-                actions.markRead(props.entry)
-                props.onOpen()
-              }}
-            >
-              {language.t("common.open")}
-            </ContextMenu.Item>
+            <ContextMenu.Item onSelect={props.onOpen}>{language.t("common.open")}</ContextMenu.Item>
             <ContextMenu.Item onSelect={togglePin}>{pinLabel()}</ContextMenu.Item>
             <ContextMenu.Item disabled={pending()} onSelect={() => void actions.fork(props.entry)}>
               {language.t("sidebar.projects.fork")}
@@ -156,9 +142,6 @@ export function SessionRow(props: { entry: InboxEntry; worktree: string; selecte
             </ContextMenu.Item>
             <ContextMenu.Item onSelect={() => void actions.copyReference(props.entry)}>
               {language.t("sidebar.projects.copyReference")}
-            </ContextMenu.Item>
-            <ContextMenu.Item disabled={!actions.ready()} onSelect={() => actions.toggleUnread(props.entry)}>
-              {language.t(unread() ? "sidebar.projects.markRead" : "sidebar.projects.markUnread")}
             </ContextMenu.Item>
             <ContextMenu.Separator />
             <ContextMenu.Item disabled={pending()} onSelect={toggleArchive}>
