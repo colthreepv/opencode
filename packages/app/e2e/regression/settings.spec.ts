@@ -2459,6 +2459,32 @@ test("a pairing code with several addresses keeps the first one that works with 
   await expect(settings.getByText(second, { exact: true })).toHaveCount(0)
 })
 
+test("interface layout keeps all four modes readable in wide and narrow settings", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  const { settings } = await open(page)
+  const layout = settings.getByRole("group", { name: "Interface layout", exact: true })
+  const cards = layout.locator("label")
+
+  await expect(cards).toHaveCount(4)
+  await layout.getByText("Sidebar Pro", { exact: true }).click()
+  await expect(layout.getByRole("radio", { name: "Sidebar Pro", exact: true })).toBeChecked()
+
+  for (const viewport of [
+    { width: 1440, height: 1000, rows: 1 },
+    { width: 390, height: 844, rows: 2 },
+  ]) {
+    await page.setViewportSize(viewport)
+    await expect
+      .poll(() =>
+        cards.evaluateAll((elements) => ({
+          readable: elements.every((element) => element.getBoundingClientRect().width >= 100),
+          rows: new Set(elements.map((element) => Math.round(element.getBoundingClientRect().top))).size,
+        })),
+      )
+      .toEqual({ readable: true, rows: viewport.rows })
+  }
+})
+
 test("the Side tabs interface mode switches to vertical tabs and survives reload", async ({ page }) => {
   const { settings } = await open(page)
   const layout = settings.getByRole("group", { name: "Interface layout", exact: true })
