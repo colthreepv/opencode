@@ -42,7 +42,7 @@ owned by upstream's inbox model. Counts use the client's family/active indexes a
    service discovery/version behavior; `gui-plugins/src/updater/main.ts` disables the dev updater.
 8. `desktop/script/fork-build.ps1` — Windows fork packaging helper. Package version changes identify this fork.
 9. `shell/routes/routes.tsx` — shares sidebar preferences above the shell, without creating an Inbox in other modes.
-10. `session/timeline/message-timeline.tsx` — conversation header menu includes shared Pin, Fork, Copy and Archive actions.
+10. `session/timeline/message-timeline.tsx` — conversation header menu includes shared Pin, Fork, Copy, Read and Archive actions.
 
 The sidebar feature otherwise lives in `shell/sidebar-pro/`. Existing storage, i18n and DOM-slot identifiers stay stable.
 
@@ -69,6 +69,10 @@ The sidebar feature otherwise lives in `shell/sidebar-pro/`. Existing storage, i
   Unlike upstream's used-project hide, this also filters projects discovered from inbox sessions. Dock activity stays visible.
 - `pins: Record<server \0 sessionID, projectKey>` — the stored key is only the project at pin time; rows group by
   the session's current project. Pinned rows always show, before the newest 5 unpinned ("Show more" adds 5).
+- `unread: Record<server \0 sessionID, true>` — manual, client-local reminders. Mark as read clears the override and
+  uses the server's existing viewed watermark. Entering a conversation from any navigation surface clears its reminder;
+  marking the currently open conversation unread keeps the reminder until the next opening. Reminders do not manufacture
+  completion/error outcomes or replace Working/Completing/approval/input status; the live Dock stays server-derived.
 - `archived: boolean` — the tree lists only archived conversations and hides projects and groups without any;
   the Dock is unaffected.
 - `dock: { height?: number; attentionCollapsed: boolean }`
@@ -85,12 +89,12 @@ groups exist; it is not collapsible).
 - `sidebar-pro.tsx` — `SidebarPro`, provider and hydration gate.
 - `state.tsx` — persisted store + actions (`createSidebarProState`), `projectKey`, and the context
   `useSidebarPro()` → `{ state, inbox }`: one store shared with the header and one `createSessionInbox()` shared
-  by tree and dock only. The shell-level `SidebarProStateProvider` owns preference hydration.
+  by tree and dock only. The shell-level `SidebarProStateProvider` owns preference hydration and clears reminders on navigation.
 - `project-tree.tsx` — `ProjectTree` and `ProjectRow`; `project-group.tsx` and `project-sessions.tsx` own groups and session lists.
 - `session-row.tsx` — `SessionRow` (status mark: ActivityRing working, warning dot approval/input, danger dot failed,
   accent dot unread done).
 - `session-actions.tsx` — full-history Fork without `before` or prompt submission, server Archive/Unarchive, Copy ID,
-  Copy reference (`@session:ses_…`) actions. Both sidebar rows and `session-menu-items.tsx` in the header
+  Copy reference (`@session:ses_…`) and read/unread actions. Both sidebar rows and `session-menu-items.tsx` in the header
   share these actions. Archival preserves local pins. Copying references never attaches history or adds a server tool.
 - `archive-model.ts` — one-row existence probes over the server project catalog, with at most four concurrent
   probes, lazy 50-row cursor pages per expanded project, and targeted old-pin hydration beyond the inbox index.

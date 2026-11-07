@@ -100,6 +100,7 @@ export function Dock() {
               selected={inbox.selected(entry())}
               now={inbox.now(entry().status)}
               onOpen={() => {
+                sidebar.state.clearUnread(entry().server, entry().session.id)
                 inbox.open(entry())
                 inbox.markViewed(entry())
               }}

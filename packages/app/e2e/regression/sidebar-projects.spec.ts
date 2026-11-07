@@ -1,11 +1,12 @@
 import { expect, test } from "@playwright/test"
-import { project, SERVER } from "../utils/app"
+import { project, SERVER, sessionHref } from "../utils/app"
 import {
   openProjectsSidebar,
   pinnedSession,
+  SIDEBAR_PROJECTS_STORAGE,
   sidebarProjectKey,
 } from "../utils/sidebar-projects"
-import { APP_READY_TIMEOUT } from "../utils/waits"
+import { APP_READY_TIMEOUT, expectSessionTitle } from "../utils/waits"
 
 test("keeps a pinned conversation beyond the first page above the newest ones and pages the rest", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
@@ -155,6 +156,7 @@ test("opens session actions from the context menu and hover, and keeps the dock 
     "Fork conversation",
     "Copy conversation ID",
     "Copy conversation reference",
+    "Mark as unread",
     "Archive conversation",
   ])
   await menu.getByRole("menuitem", { name: "Copy conversation ID", exact: true }).click()
@@ -194,4 +196,92 @@ test("opens session actions from the context menu and hover, and keeps the dock 
   await sidebar.unarchive("Idle conversation").click()
   await expect(archivedRow).toHaveCount(0)
   expect(patches).toEqual([{ archived: true }, { archived: false }])
+})
+
+test("keeps a local unread mark until the conversation is opened, including an external navigation", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  const directory = "C:/OpenCode/Unread"
+  const idleID = "ses_unread_idle"
+  const workingID = "ses_unread_working"
+  const idleKey = `${SERVER}\0${idleID}`
+  const workingKey = `${SERVER}\0${workingID}`
+
+  const unread = () =>
+    page.evaluate((storage) => {
+      const stored = JSON.parse(localStorage.getItem(storage) ?? "{}")
+
+      return stored.unread ?? {}
+    }, SIDEBAR_PROJECTS_STORAGE)
+
+  const { sidebar } = await openProjectsSidebar(page, {
+    name: "Unread",
+    directory,
+    sessions: [
+      { id: idleID, title: "Idle conversation", directory, created: 2 },
+      { id: workingID, title: "Working conversation", directory, created: 1 },
+    ],
+    sessionStatus: { [workingID]: { type: "running" } },
+    sidebar: { expanded: { [sidebarProjectKey(SERVER, directory)]: true } },
+  })
+
+  await expect(sidebar.session("Idle conversation")).toHaveAccessibleName("Idle conversation")
+
+  // The mark is client-local, keyed by server and session, and reads back into the row's accessible name.
+  await sidebar.session("Idle conversation").click({ button: "right" })
+  await page.getByRole("menuitem", { name: "Mark as unread", exact: true }).click()
+  await expect.poll(unread).toEqual({ [idleKey]: true })
+  await expect(sidebar.session("Idle conversation")).toHaveAccessibleName("Idle conversation Unread")
+
+  // Marking a working conversation unread must not replace its working status.
+  const workingRow = sidebar.tree.getByRole("treeitem", { name: /^Working conversation Working(?: Unread)?$/ })
+  await workingRow.click({ button: "right" })
+  await page.getByRole("menuitem", { name: "Mark as unread", exact: true }).click()
+  await expect.poll(unread).toEqual({ [idleKey]: true, [workingKey]: true })
+  await expect(workingRow).toHaveAttribute("data-status", "working")
+  await expect(workingRow.locator('[data-component="activity-ring"]')).toHaveCount(1)
+  await expect(workingRow).toHaveAccessibleName("Working conversation Working Unread")
+
+  // The mark survives a reload because it is persisted with the Projects layout.
+  await page.reload()
+  await expect(sidebar.session("Idle conversation")).toHaveAccessibleName("Idle conversation Unread")
+  const markedWorking = sidebar.tree.getByRole("treeitem", { name: "Working conversation Working Unread", exact: true })
+  await expect(markedWorking).toBeVisible()
+  await expect(markedWorking.locator('[data-component="activity-ring"]')).toBeVisible()
+
+  // Opening from the tree clears that session only.
+  await sidebar.session("Idle conversation").click()
+  await expectSessionTitle(page, "Idle conversation")
+  await expect.poll(unread).toEqual({ [workingKey]: true })
+
+  // Navigating to a session from outside the tree clears it on the next opening too.
+  await page.goto(sessionHref(workingID))
+  await expectSessionTitle(page, "Working conversation")
+  await expect.poll(unread).toEqual({})
+})
+
+test("marks a server unread result read without opening the conversation", async ({ page }) => {
+  const directory = "C:/OpenCode/Read Result"
+  const sessionID = "ses_read_result"
+  const { sidebar } = await openProjectsSidebar(page, {
+    name: "Read Result",
+    directory,
+    sessions: [
+      { id: sessionID, title: "Completed conversation", directory, time: { created: 1, updated: 2, idle: 2 } },
+    ],
+    seed: { tabs: [] },
+    sidebar: { expanded: { [sidebarProjectKey(SERVER, directory)]: true } },
+  })
+  const row = sidebar.tree.getByRole("treeitem", { name: /^Completed conversation/ })
+  await expect(row).toHaveAttribute("data-status", "done")
+  await row.click({ button: "right" })
+  const viewed = page.waitForRequest(
+    (request) => request.method() === "POST" && new URL(request.url()).pathname === `/api/session/${sessionID}/view`,
+  )
+  await page.getByRole("menuitem", { name: "Mark as read", exact: true }).click()
+  expect((await viewed).postDataJSON()).toEqual({ idle: 2 })
+  await expect(row).toHaveAttribute("data-status", "ready")
+  await expect(row).toHaveAccessibleName("Completed conversation")
+  await expect(page).toHaveURL("/")
 })

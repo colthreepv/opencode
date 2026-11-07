@@ -18,10 +18,12 @@ inspired by Codex. Independent project; not built by or affiliated with the Open
 - **Archived conversations:** toggle **Archived** in the compact toolbar to browse and restore history by group
   and project. Empty groups disappear, older pages remain reachable, and the live Dock stays put.
 - **Conversation actions:** Pin and Archive on hover/focus; right-click or **Shift+F10** for the full menu, including
-  **Fork conversation**, **Copy conversation ID** and **Copy conversation reference**.
+  **Fork conversation**, **Copy conversation ID**, **Copy conversation reference** and **Mark as unread / Mark as read**.
   The same actions are available in the conversation header's **…** menu.
 - **Conversation references:** copy the existing `@session:ses_…` mention format for another conversation on the same
   server, even in a different repository. Copying does not attach history or add an agent-side conversation-reading tool.
+- **Unread reminders:** mark conversations unread locally without changing their activity status. Opening one clears its
+  reminder; Mark as read also uses OpenCode's existing server-side viewed state.
 - **Session moves:** drag a conversation to another project on the same server; running sessions offer queue or steer.
 - **Bottom Dock:** collapsible **Needs attention** for approvals, questions, failures and unread results; permanent
   **Ongoing** with a blue text shimmer while sessions run and a compact placeholder when idle.
@@ -48,7 +50,8 @@ Edit a project's display name, choose a monochrome glyph or emoji, and pick its 
 Projects and conversations stay on your OpenCode server. Groups, project order, emoji/glyph choices and Dock preferences
 are client-local: browser localStorage, or the desktop client's `drafts.sqlite` (`state` table, `sidebar-projects` key).
 These layout preferences are not transferred automatically between browser and desktop.
-Pins and the archive-view preference are also client-local. Archiving a conversation is server-side and reversible;
+Pins, manual unread reminders and the archive-view preference are also client-local. Manual unread reminders do not sync
+to other clients. Archiving a conversation is server-side and reversible;
 it preserves the local pin and never deletes files or stops a running agent. A conversation-level fork copies the
 current history and opens it without sending a prompt.
 

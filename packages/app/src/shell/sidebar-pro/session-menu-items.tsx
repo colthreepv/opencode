@@ -59,6 +59,10 @@ export function SidebarProSessionMenuItems(props: { session: SessionInfo | undef
             <Icon name="outline-share" />
             {language.t("sidebar.projects.copyReference")}
           </Menu.Item>
+          <Menu.Item disabled={!actions.ready()} onSelect={() => actions.toggleUnread(entry())}>
+            <Icon name={actions.unread(entry()) ? "outline-eye" : "outline-eye-slash"} />
+            {language.t(actions.unread(entry()) ? "sidebar.projects.markRead" : "sidebar.projects.markUnread")}
+          </Menu.Item>
           <Menu.Item disabled={actions.pending(entry())} onSelect={() => void actions.archive(entry())}>
             <Icon name="archive" />
             {language.t(
