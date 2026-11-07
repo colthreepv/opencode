@@ -1,12 +1,13 @@
 # Personal build manifest
 
 Agent instructions for the `personal` integration branch. This file belongs only to `personal`; do not add it to
-`sidebar-pro`, the fork's default branch. Keep `README.md` identical to Sidebar Pro's README.
+`sidebar-pro`, the fork's default branch. Keep `README.md` identical to Sidebar Pro's README after final integration.
 
 ## Base
 
 - Repository: `colthreepv/opencode`.
-- Sidebar base: `sidebar-pro` (currently official OpenCode `v2.2.5`; see `.github/sidebar/config.json`).
+- Sidebar base: `sidebar-pro`, based on official OpenCode `v2.2.6` (`dc2ffcf8bf`), including the local
+  `stable-conversations` feature.
 - Never integrate `upstream/dev` wholesale. Advance the sidebar base only to an accepted stable V2 release.
 
 ## Patch queue
@@ -16,12 +17,15 @@ Upstream status checked on 2026-11-07. An open or rejected PR does not prevent u
 | Patch | Integration status | Upstream PR | Reference branch | Source commits |
 | --- | --- | --- | --- | --- |
 | Independent external-editor launches; report launch errors instead of falling back to Explorer | Included | [#62542](https://github.com/anomalyco/opencode/pull/62542), open | `origin/detach-editor` | `94adf06657`, `9faf3329f0` |
-| File links navigate to and center the requested line; file-viewer word wrap control and icon | Pending accepted v2.2.6 base: requires the upstream file-scroll machine absent from v2.2.5 | [#62543](https://github.com/anomalyco/opencode/pull/62543), open | `origin/fix/go-to-codeline` | `dcc5b7c796`, `7c0954e04a` |
+| File links navigate to and center the requested line; file-viewer word wrap control and icon | Included | [#62543](https://github.com/anomalyco/opencode/pull/62543), open | `origin/fix/go-to-codeline` | `dcc5b7c796`, `7c0954e04a` |
 
-Apply the listed commits in order with `git cherry-pick -x`; do not merge the entire reference branches, which track
-upstream development. Check whether the accepted stable base already includes a patch before applying it again.
-When advancing `personal`, replay only its integration commits onto the accepted `sidebar-pro` tip and retain this file.
-Update PR status and commit references whenever the patch set changes. Do not change the fork's default branch.
+The listed source commits were cherry-picked in order onto v2.2.6 without merging their development bases. Prefer
+scoped cherry-picks when a development base would add unrelated changes. Feature branch merges are allowed after
+reviewing their net changes and testing the result.
+
+Maintain `personal` by merging the accepted `sidebar-pro` and checking whether patches are already included before
+applying them again. Retain this file, and update PR status and commit references whenever the patch set changes.
+Do not change the fork's default branch.
 
 ## Verify and build
 
