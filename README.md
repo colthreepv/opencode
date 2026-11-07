@@ -82,6 +82,9 @@ The fork build helper is Windows-specific; other platforms have not been validat
 
 ## Fork automation
 
+- **Personal releases:** every push to `personal` builds a Windows x64 installer and Linux x64 AppImage/deb/rpm,
+  then publishes `v<base>-personal.<build-number>` with checksums and a build manifest. Download the current packages
+  from [the latest release](https://github.com/colthreepv/opencode/releases/latest). The workflow can also be started manually.
 - **Upstream compatibility:** a check every six hours watches stable **V2** releases, tries the sidebar branch on the new base
   in a disposable runner, and reports conflicts or check results in one issue per release. It never pushes an update
   or modifies the maintained branch. You can also run it manually from the Actions tab.
