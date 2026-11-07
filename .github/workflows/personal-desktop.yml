@@ -1,0 +1,49 @@
+name: Personal desktop Windows and Linux
+run-name: Personal desktop · ${{ github.ref_name }} · ${{ github.sha }}
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: personal-desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.repository == 'colthreepv/opencode' && github.ref_name == 'personal'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: windows-x64, runner: windows-2022 }
+          - { target: linux-x64, runner: ubuntu-24.04 }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0, Node 24
+        with:
+          bun-version: 1.4.4
+      - name: Linux packaging dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends rpm
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Build installable personal desktop
+        run: bun .github/sidebar/build-desktop.ts
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6, Node 24
+        with:
+          name: opencode-personal-${{ matrix.target }}-${{ github.sha }}
+          path: dist/personal-artifact/${{ matrix.target }}/*
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
