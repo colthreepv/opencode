@@ -6,6 +6,8 @@ Release notes for this Sidebar Pro fork, followed by the upstream OpenCode V2 ch
 
 - Updated the maintained Sidebar Pro branch to official OpenCode **v2.2.6**, preserving fork preferences, the live
   Dock, and attach-only discovery of an existing shared background service. Release binaries remain a separate build.
+- Kept all four Interface layout cards readable in the compact Settings row: four across on wide screens and two
+  by two on narrow screens.
 - Kept existing conversation rows in a stable order while any root in their project is working or waiting for
   approval/input. New conversations appear at the top of their pinned/unpinned section; membership and pin/archive
   changes remain immediate. When the whole project is idle, both sections return to last-update order. The Dock's
