@@ -31,12 +31,15 @@ Do not change the fork's default branch.
 
 1. Use a clean checkout of `personal`, then `bun install --frozen-lockfile`.
 2. Run `bun run check` at the repository root and relevant package tests from their package directories.
-3. Build the Windows x64 installer and Linux x64 AppImage/deb/rpm through the personal workflow:
+3. Push to `personal` to automatically build and publish the Windows x64 installer and Linux x64 AppImage/deb/rpm.
+   The workflow can also be started manually:
 
    ```sh
    gh workflow run personal-desktop.yml --repo colthreepv/opencode --ref personal
    ```
 
-The two jobs build the same commit and upload packages, checksums and a build manifest (retained for seven days).
-The manifest records the exact source commit and upstream base. Do not publish or install automatically.
+The two build jobs use the same commit. Once both pass, the publish job creates the latest GitHub release,
+`v<base>-personal.<build-number>`, with permanent packages, checksums and a combined manifest. CI artifacts are retained
+for seven days. To retry publication without rebuilding, dispatch with `-f artifact_run=<successful-run-id>`.
+The manifest records the exact source commit and upstream base. Installation remains manual.
 Never stop, restart, replace or downgrade the user's running OpenCode app or background service while integrating patches.
