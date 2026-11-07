@@ -31,11 +31,12 @@ Do not change the fork's default branch.
 
 1. Use a clean checkout of `personal`, then `bun install --frozen-lockfile`.
 2. Run `bun run check` at the repository root and relevant package tests from their package directories.
-3. Build the Windows ZIP through the existing workflow, explicitly selecting this branch:
+3. Build the Windows x64 installer and Linux x64 AppImage/deb/rpm through the personal workflow:
 
    ```sh
-   gh workflow run sidebar-windows.yml --repo colthreepv/opencode --ref personal
+   gh workflow run personal-desktop.yml --repo colthreepv/opencode --ref personal
    ```
 
-The artifact manifest records the exact source commit and upstream base. Do not publish or install automatically.
+The two jobs build the same commit and upload packages, checksums and a build manifest (retained for seven days).
+The manifest records the exact source commit and upstream base. Do not publish or install automatically.
 Never stop, restart, replace or downgrade the user's running OpenCode app or background service while integrating patches.
