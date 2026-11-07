@@ -38,7 +38,7 @@ import {
 import { SessionHeaderSpacer } from "@/session/header/session-header"
 import { SessionHeaderGap } from "@/session/header/drag-area"
 import { SessionWorkingIndicator } from "@/session/header/session-working-indicator"
-import { SessionProjectMenuItems } from "@/shell/sidebar-projects/session-menu-items"
+import { SidebarProSessionMenuItems } from "@/shell/sidebar-pro/session-menu-items"
 
 type BlockingTask = { type: "shell" | "subagent"; partID: string; id?: string; label?: string }
 
@@ -680,7 +680,7 @@ function MessageTimelineView(
                           {language.t("common.export")}…
                         </Menu.Item>
                         <Menu.Separator />
-                        <SessionProjectMenuItems session={props.session.data.info()} />
+                        <SidebarProSessionMenuItems session={props.session.data.info()} />
                         <Menu.Separator />
                         <Menu.Item onSelect={() => props.action.showDelete(id)}>
                           {language.t("common.delete")}…

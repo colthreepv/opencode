@@ -5,16 +5,16 @@ import { Icon } from "@opencode/ui/icon"
 import { useServer } from "@/runtime/server/current"
 import { useLanguage } from "@/runtime/i18n/language"
 import type { InboxEntry } from "@/shell/titlebar/inbox-model"
-import { useSidebarProjectsState } from "./state"
-import { useProjectSessionActions } from "./session-actions"
+import { useSidebarProState } from "./state"
+import { useSidebarProSessionActions } from "./session-actions"
 import { PinIcon } from "./pin-icon"
 
 /** The same session-level actions as the Projects tree, available in every conversation header. */
-export function SessionProjectMenuItems(props: { session: SessionInfo | undefined }) {
+export function SidebarProSessionMenuItems(props: { session: SessionInfo | undefined }) {
   const server = useServer()
   const language = useLanguage()
-  const state = useSidebarProjectsState()
-  const actions = useProjectSessionActions()
+  const state = useSidebarProState()
+  const actions = useSidebarProSessionActions()
 
   const entry = createMemo<InboxEntry | undefined>(() => {
     const session = props.session
@@ -53,6 +53,14 @@ export function SessionProjectMenuItems(props: { session: SessionInfo | undefine
           <Menu.Item onSelect={() => void actions.copyID(entry())}>
             <Icon name="copy" />
             {language.t("sidebar.projects.copyID")}
+          </Menu.Item>
+          <Menu.Item onSelect={() => void actions.copyReference(entry())}>
+            <Icon name="outline-share" />
+            {language.t("sidebar.projects.copyReference")}
+          </Menu.Item>
+          <Menu.Item disabled={!actions.ready()} onSelect={() => actions.toggleUnread(entry())}>
+            <Icon name={actions.unread(entry()) ? "outline-eye" : "outline-eye-slash"} />
+            {language.t(actions.unread(entry()) ? "sidebar.projects.markRead" : "sidebar.projects.markUnread")}
           </Menu.Item>
           <Menu.Item disabled={actions.pending(entry())} onSelect={() => void actions.archive(entry())}>
             <Icon name="archive" />

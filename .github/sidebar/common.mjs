@@ -1,5 +1,5 @@
 export function config(value) {
-  if (!value || value.upstream !== "anomalyco/opencode" || value.branch !== "sidebar-projects" ||
+  if (!value || value.upstream !== "anomalyco/opencode" || value.branch !== "sidebar-pro" ||
       !stable(value.baseTag) || typeof value.mention !== "string" || !/^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$/.test(value.mention) || value.mention.includes("\n")) {
     throw new Error("Invalid sidebar config")
   }

@@ -74,7 +74,7 @@ try {
   }
   $manifest | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $output 'build-manifest.json') -Encoding utf8NoBOM
   if ($env:GITHUB_STEP_SUMMARY) {
-    "### Sidebar Windows desktop`n`n- Commit: ``$commit```n- Base: ``$($config.baseTag)```n- Version: ``$buildVersion```n- ZIP SHA256: ``$zipHash```n- Unsigned; updater disabled by the fork." | Add-Content $env:GITHUB_STEP_SUMMARY
+    "### Sidebar Pro Windows desktop`n`n- Commit: ``$commit```n- Base: ``$($config.baseTag)```n- Version: ``$buildVersion```n- ZIP SHA256: ``$zipHash```n- Unsigned; updater disabled by the fork." | Add-Content $env:GITHUB_STEP_SUMMARY
   }
 } finally {
   Remove-Item $temp -Recurse -Force -ErrorAction SilentlyContinue

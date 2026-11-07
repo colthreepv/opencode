@@ -3,10 +3,10 @@ import { Show } from "solid-js"
 import { ProjectIcon } from "@/shell/layout/project-icon"
 import type { LocalProject } from "@/shell/state/layout"
 import { glyphBodies, glyphViewBox, isGlyphName } from "./glyphs"
-import { useSidebarProjects, type SidebarProjectsStore } from "./state"
+import { useSidebarPro, type SidebarProStore } from "./state"
 import "./glyph.css"
 
-type Glyph = SidebarProjectsStore["store"]["glyphs"][string]
+type Glyph = SidebarProStore["store"]["glyphs"][string]
 
 export function GlyphIcon(props: { name: string }) {
   return (
@@ -30,7 +30,7 @@ export function GlyphIcon(props: { name: string }) {
 }
 
 export function ProjectGlyph(props: { project: LocalProject; projectKey: string; color?: string }) {
-  const sidebar = useSidebarProjects()
+  const sidebar = useSidebarPro()
   const glyph = () => sidebar.state.store.glyphs[props.projectKey]
   const color = () => props.color ?? props.project.icon?.color
 

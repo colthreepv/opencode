@@ -500,6 +500,7 @@ export function createMockServerHandler(
           nextCursor: 0,
           sessionCreates: 0,
           sessionForks: 0,
+          sessionViews: 0,
           persistentPty,
           emit,
           mcp: new Map<string, MockMcpStatus>(),
@@ -599,6 +600,7 @@ function mockHandlers(
     nextCursor: number
     sessionCreates: number
     sessionForks: number
+    sessionViews: number
     persistentPty: ReturnType<typeof createPersistentPty>
     emit: (events: MockServerEvent[]) => void
     // MCP status overrides by `<directory>\n<server>`, and OAuth attempt creation times by attempt ID.
@@ -1123,8 +1125,7 @@ function mockHandlers(
                     .includes(ctx.query.search.toLowerCase()),
             )
             .filter(
-              (session) =>
-                ctx.query.project === undefined || (session.projectID ?? "project") === ctx.query.project,
+              (session) => ctx.query.project === undefined || (session.projectID ?? "project") === ctx.query.project,
             )
             .filter(
               (session) =>
@@ -1206,7 +1207,24 @@ function mockHandlers(
           }),
         sessionRemove: () => noContent,
         sessionShell: () => noContent,
-        sessionView: () => noContent,
+        sessionView: (ctx) =>
+          Effect.sync(() => {
+            const session = config.sessions.find((session) => session.id === ctx.params.sessionID)
+
+            if (!session) return
+            const time = Predicate.isObject(session.time) ? session.time : {}
+            session.time = { ...time, viewed: ctx.payload.idle }
+            state.sessionViews += 1
+            state.emit([
+              {
+                id: `evt_viewed_${state.sessionViews}`,
+                type: "session.viewed",
+                created: Date.now(),
+                durable: { aggregateID: ctx.params.sessionID, seq: state.sessionViews, version: 1 },
+                data: { sessionID: ctx.params.sessionID, idle: ctx.payload.idle },
+              },
+            ])
+          }).pipe(Effect.andThen(noContent)),
         sessionForm: (ctx) =>
           Effect.succeed({
             data: resolve(config.forms ?? []).filter(

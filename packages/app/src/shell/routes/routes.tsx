@@ -6,7 +6,7 @@ import { useGlobal } from "@/runtime/server/runtime"
 import { ServerConnection, useServers } from "@/runtime/server/registry"
 import { SessionPanelFrame, SessionRouteFrame } from "@/session/session-frame"
 import { LayoutProvider } from "@/shell/state/layout"
-import { SidebarProjectsStateProvider } from "@/shell/sidebar-projects/state"
+import { SidebarProStateProvider } from "@/shell/sidebar-pro/state"
 import { SettingsSurfaceProvider } from "@/settings/surface"
 import Shell from "@/shell/shell"
 import { requireServerKey } from "./session"
@@ -108,13 +108,13 @@ function AppLayout(props: ParentProps) {
   return (
     <Show when={servers.list.length > 0 && !signedOut()} fallback={<ConnectServerScreen url={signedOut()?.http.url} />}>
       <LayoutProvider>
-        <SidebarProjectsStateProvider>
+        <SidebarProStateProvider>
           <SettingsSurfaceProvider>
             <PluginAttachment>
               <Shell>{props.children}</Shell>
             </PluginAttachment>
           </SettingsSurfaceProvider>
-        </SidebarProjectsStateProvider>
+        </SidebarProStateProvider>
       </LayoutProvider>
     </Show>
   )

@@ -1,7 +1,7 @@
 import { expect, type Page } from "@playwright/test"
 import { comparablePath } from "@opencode/util/path"
 import { Predicate } from "effect"
-import type { SidebarProjectsStore } from "@/shell/sidebar-projects/state"
+import type { SidebarProStore } from "@/shell/sidebar-pro/state"
 import { project } from "./app"
 import { mockWorkspace, type WorkspaceInput } from "./workspace"
 import { APP_READY_TIMEOUT } from "./waits"
@@ -18,7 +18,7 @@ export function pinnedSession(server: string, sessionID: string, directory: stri
   return { [`${server}\0${sessionID}`]: sidebarProjectKey(server, directory) }
 }
 
-export function sidebarProjectsStorage(input: Partial<SidebarProjectsStore["store"]> = {}) {
+export function sidebarProjectsStorage(input: Partial<SidebarProStore["store"]> = {}) {
   return {
     [SIDEBAR_PROJECTS_STORAGE]: {
       groups: [],
@@ -38,7 +38,7 @@ export function sidebarProjectsStorage(input: Partial<SidebarProjectsStore["stor
 /** Opens Home with the Projects interface mode and waits for its tree. */
 export async function openProjectsSidebar(
   page: Page,
-  input: WorkspaceInput & { sidebar?: Partial<SidebarProjectsStore["store"]> },
+  input: WorkspaceInput & { sidebar?: Partial<SidebarProStore["store"]> },
 ) {
   const { sidebar, ...workspace } = input
   // A catalog entry replaces the mock server's default project inventory, so keep the primary project in it.
@@ -53,11 +53,7 @@ export async function openProjectsSidebar(
   const extra = workspace.projects
 
   const projects =
-    extra === undefined
-      ? undefined
-      : Predicate.isFunction(extra)
-        ? () => [primary, ...extra()]
-        : [primary, ...extra]
+    extra === undefined ? undefined : Predicate.isFunction(extra) ? () => [primary, ...extra()] : [primary, ...extra]
 
   const opened = await mockWorkspace(page, {
     ...workspace,
@@ -81,10 +77,11 @@ export function sidebarProjects(page: Page) {
   const tree = root.locator('[data-slot="sidebar-projects-tree"]')
   const sessions = tree.locator('[data-slot="sidebar-projects-session-item"]')
   const items = sessions
-  const session = (title: string) => tree.getByRole("treeitem", { name: title, exact: true })
+  // The row's accessible name gains a trailing "Unread" while its local or server-side unread mark is set.
+  const name = (title: string) => new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?: Unread)?$`)
+  const session = (title: string) => tree.getByRole("treeitem", { name: name(title) })
 
-  const row = (title: string) =>
-    items.filter({ has: page.getByRole("treeitem", { name: title, exact: true }) })
+  const row = (title: string) => items.filter({ has: page.getByRole("treeitem", { name: name(title) }) })
 
   const action = (title: string, name: string) => row(title).getByRole("button", { name, exact: true })
 

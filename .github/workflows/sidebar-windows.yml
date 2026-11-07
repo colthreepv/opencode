@@ -1,4 +1,4 @@
-name: Sidebar Windows desktop
+name: Sidebar Pro Windows desktop
 
 on:
   workflow_dispatch:

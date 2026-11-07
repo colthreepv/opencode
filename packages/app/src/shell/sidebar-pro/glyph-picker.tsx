@@ -16,12 +16,12 @@ import { createEditProjectModel } from "@/settings/workspaces/project-model"
 import type { LocalProject } from "@/shell/state/layout"
 import { GlyphIcon, ProjectGlyph } from "./glyph"
 import { glyphNames } from "./glyphs"
-import { useSidebarProjects } from "./state"
+import { useSidebarPro } from "./state"
 import "./glyph-picker.css"
 
 export function GlyphPicker(props: { project: LocalProject; server: ServerConnection.Any; projectKey: string }) {
   const language = useLanguage()
-  const sidebar = useSidebarProjects()
+  const sidebar = useSidebarPro()
   const model = createEditProjectModel(props)
   const [store, setStore] = createStore({ search: "", emoji: "", active: -1 })
   let grid!: HTMLDivElement

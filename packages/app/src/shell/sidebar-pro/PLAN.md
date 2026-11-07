@@ -1,15 +1,15 @@
-# Projects sidebar (fork feature)
+# Sidebar Pro (fork feature)
 
-Fork: `colthreepv/opencode`, branch `sidebar-projects`, rebased onto every upstream release tag
+Fork: `colthreepv/opencode`, branch `sidebar-pro`, rebased onto every upstream release tag
 (`upstream` = `anomalyco/opencode`). Started from `v2.2.5`.
 
-A fourth interface mode, **Projects**, beside Top tabs / Side tabs / Inbox: a Codex-style project tree on top
+A fourth interface mode, **Sidebar Pro** (internal value `projects`), beside Top tabs / Side tabs / Inbox: a Codex-style project tree on top
 and a Dock with live session state at the bottom.
 
 ## Glossary (use these names in code)
 
 ```
-SidebarProjects                 the whole sidebar (interface mode "projects")
+SidebarPro                      the whole sidebar (interface mode "projects")
 ├─ ProjectTree                  top area, scrollable
 │   └─ ProjectGroup             user-defined, just a name; collapsible; draggable
 │       └─ ProjectRow           glyph + color + name; draggable within/between groups; drop target for sessions
@@ -32,7 +32,7 @@ owned by upstream's inbox model. Counts use the client's family/active indexes a
 ## Upstream touch points (keep this list short; it is the rebase surface)
 
 1. `settings/model.tsx` — add `"projects"` to `tabLayout` literals.
-2. `settings/general/interface-mode.tsx` — add the mode + `ProjectsPreview`.
+2. `settings/general/interface-mode.tsx` — add the mode + `SidebarProPreview`.
 3. `shell/titlebar/titlebar.tsx` (~L866) — `<Show inbox>` becomes a `<Switch>` with a `projects` case.
 4. `runtime/i18n/en.ts` — `sidebar.projects.*` and `settings.general.row.interfaceMode.projects*` keys (English only).
 5. `packages/ui/src/typography/text-shimmer/text-shimmer.css` — the inherited `--text-shimmer-color` hook lets the
@@ -42,9 +42,9 @@ owned by upstream's inbox model. Counts use the client's family/active indexes a
    service discovery/version behavior; `gui-plugins/src/updater/main.ts` disables the dev updater.
 8. `desktop/script/fork-build.ps1` — Windows fork packaging helper. Package version changes identify this fork.
 9. `shell/routes/routes.tsx` — shares sidebar preferences above the shell, without creating an Inbox in other modes.
-10. `session/timeline/message-timeline.tsx` — conversation header menu includes shared Pin, Fork, Archive actions.
+10. `session/timeline/message-timeline.tsx` — conversation header menu includes shared Pin, Fork, Copy, Read and Archive actions.
 
-The sidebar feature otherwise lives in `shell/sidebar-projects/`.
+The sidebar feature otherwise lives in `shell/sidebar-pro/`. Existing storage, i18n and DOM-slot identifiers stay stable.
 
 ## Reused upstream pieces
 
@@ -69,6 +69,10 @@ The sidebar feature otherwise lives in `shell/sidebar-projects/`.
   Unlike upstream's used-project hide, this also filters projects discovered from inbox sessions. Dock activity stays visible.
 - `pins: Record<server \0 sessionID, projectKey>` — the stored key is only the project at pin time; rows group by
   the session's current project. Pinned rows always show, before the newest 5 unpinned ("Show more" adds 5).
+- `unread: Record<server \0 sessionID, true>` — manual, client-local reminders. Mark as read clears the override and
+  uses the server's existing viewed watermark. Entering a conversation from any navigation surface clears its reminder;
+  marking the currently open conversation unread keeps the reminder until the next opening. Reminders do not manufacture
+  completion/error outcomes or replace Working/Completing/approval/input status; the live Dock stays server-derived.
 - `archived: boolean` — the tree lists only archived conversations and hides projects and groups without any;
   the Dock is unaffected.
 - `dock: { height?: number; attentionCollapsed: boolean }`
@@ -82,15 +86,16 @@ groups exist; it is not collapsible).
 
 ## Files
 
-- `sidebar-projects.tsx` — `SidebarProjects`, provider and hydration gate.
-- `state.tsx` — persisted store + actions (`createSidebarProjectsState`), `projectKey`, and the context
-  `useSidebarProjects()` → `{ state, inbox }`: one store shared with the header and one `createSessionInbox()` shared
-  by tree and dock only. The shell-level `SidebarProjectsStateProvider` owns preference hydration.
+- `sidebar-pro.tsx` — `SidebarPro`, provider and hydration gate.
+- `state.tsx` — persisted store + actions (`createSidebarProState`), `projectKey`, and the context
+  `useSidebarPro()` → `{ state, inbox }`: one store shared with the header and one `createSessionInbox()` shared
+  by tree and dock only. The shell-level `SidebarProStateProvider` owns preference hydration and clears reminders on navigation.
 - `project-tree.tsx` — `ProjectTree` and `ProjectRow`; `project-group.tsx` and `project-sessions.tsx` own groups and session lists.
 - `session-row.tsx` — `SessionRow` (status mark: ActivityRing working, warning dot approval/input, danger dot failed,
   accent dot unread done).
-- `session-actions.tsx` — full-history Fork without `before` or prompt submission, and server Archive/Unarchive;
-  both sidebar rows and `session-menu-items.tsx` in the header share these actions. Archival preserves local pins.
+- `session-actions.tsx` — full-history Fork without `before` or prompt submission, server Archive/Unarchive, Copy ID,
+  Copy reference (`@session:ses_…`) and read/unread actions. Both sidebar rows and `session-menu-items.tsx` in the header
+  share these actions. Archival preserves local pins. Copying references never attaches history or adds a server tool.
 - `archive-model.ts` — one-row existence probes over the server project catalog, with at most four concurrent
   probes, lazy 50-row cursor pages per expanded project, and targeted old-pin hydration beyond the inbox index.
   Archive/unarchive/move/delete events refresh archive discovery, including previously empty projects.
@@ -99,7 +104,7 @@ groups exist; it is not collapsible).
 - `dock.tsx` — `Dock`, section sizing and resize interaction.
 - `session-move.tsx` — move confirmation; `keyboard.ts` — keyboard interaction helpers.
 - `glyph.tsx`, `glyph-picker.tsx`, `glyphs.ts` and their CSS — project glyph rendering and selection.
-- `preview.tsx` / `preview.css` — Settings > Interface preview (`SidebarProjectsPreview`), so `interface-mode.tsx`
+- `preview.tsx` / `preview.css` — Settings > Interface preview (`SidebarProPreview`), so `interface-mode.tsx`
   only gains the mode entry and one `<Match>`.
 
 ## Phases
@@ -146,7 +151,7 @@ retry. When `service.json` exists, it only discovers the service, without `ensur
 recovery or terminal handoff side effects. An unavailable registered service causes connection failure,
 not replacement. With no registration it may start the bundled official CLI. Both clients share the real
 service/data; client-local preferences, tabs and project selections remain separate. Open projects in this
-client as needed; choose **Settings > General > Interface mode > Projects**.
+client as needed; choose **Settings > General > Interface mode > Sidebar Pro**.
 
 If the official app advances to `2.2.6`, the fork still attaches without downgrading/restarting its service.
 Client/API incompatibility remains possible: rebase onto that release and rebuild to update renderer and
@@ -162,12 +167,12 @@ using that fallback after an official update. Do not use service stop/restart to
 - Upstream [#61445](https://github.com/anomalyco/opencode/pull/61445) replaces the Inbox row's Working shimmer with
   an activity ring and elapsed time. When rebasing onto a release containing it, accept upstream's Inbox row and
   drop our temporary `inbox.tsx` colour override/comment. No need to restore that row's old markup.
-- Keep the `--text-shimmer-color` hook in `text-shimmer.css` and its use in `sidebar-projects/dock.tsx`, unless
+- Keep the `--text-shimmer-color` hook in `text-shimmer.css` and its use in `sidebar-pro/dock.tsx`, unless
   upstream provides an equivalent overridable hook. No `!important`.
 - At upstream `3ec9b3b0a6936ac38360004870024028c1cc0c71`, the collapsed Working section heading still uses
   `TextShimmer`; only its individual working rows lost the shimmer.
 
 ```
 git fetch upstream --tags
-git rebase --onto vX.Y.Z <previous-base-tag> sidebar-projects
+git rebase --onto vX.Y.Z <previous-base-tag> sidebar-pro
 ```

@@ -804,6 +804,12 @@ export const dict = {
   "sidebar.projects.unpin": "Unpin conversation",
   "sidebar.projects.fork": "Fork conversation",
   "sidebar.projects.copyID": "Copy conversation ID",
+  "sidebar.projects.copyReference": "Copy conversation reference",
+  "sidebar.projects.markRead": "Mark as read",
+  "sidebar.projects.markUnread": "Mark as unread",
+  "sidebar.projects.unread": "Unread",
+  "toast.session.copy.failed.title": "Couldn't copy conversation",
+  "toast.session.copy.failed.description": "Copying to the clipboard failed. Please try again.",
   "sidebar.projects.archive": "Archive conversation",
   "sidebar.projects.unarchive": "Unarchive conversation",
   "sidebar.projects.dock.label": "Live sessions",
@@ -918,7 +924,7 @@ export const dict = {
   "settings.general.row.interfaceMode.inbox": "Inbox",
   "settings.general.row.interfaceMode.inbox.description":
     "Every session across your servers, sorted by what needs you next.",
-  "settings.general.row.interfaceMode.projects": "Projects",
+  "settings.general.row.interfaceMode.projects": "Sidebar Pro",
   "settings.general.row.interfaceMode.projects.description":
     "Your projects in groups, with live sessions docked below.",
   "settings.general.row.interfaceMode.experimental": "Experimental",

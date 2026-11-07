@@ -1,7 +1,7 @@
 import { For, Match, Show, Switch, createUniqueId } from "solid-js"
 import { useLanguage } from "@/runtime/i18n/language"
 import { type TabLayout, useSettings } from "@/settings/model"
-import { SidebarProjectsPreview } from "@/shell/sidebar-projects/preview"
+import { SidebarProPreview } from "@/shell/sidebar-pro/preview"
 import "./interface-mode.css"
 
 const modes = [
@@ -46,9 +46,9 @@ export function InterfaceModeSetting() {
                   <InboxPreview />
                 </Match>
                 <Match when={mode.id === "projects"}>
-                  <SidebarProjectsPreview>
+                  <SidebarProPreview>
                     <PreviewWorkspace />
-                  </SidebarProjectsPreview>
+                  </SidebarProPreview>
                 </Match>
               </Switch>
             </div>

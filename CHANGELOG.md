@@ -1,11 +1,23 @@
 # Changelog
 
-Release notes for this Projects sidebar fork, followed by the upstream OpenCode V2 changelog.
+Release notes for this Sidebar Pro fork, followed by the upstream OpenCode V2 changelog.
 
 ## Unreleased
 
+- Renamed the fork to **Sidebar Pro**. This is a branding change only: release tag names, installer identity and
+  persisted client preferences keep their existing identifiers. The `sidebar-projects` storage key and the internal
+  `projects` interface-mode value are unchanged, so existing settings continue to apply. The maintained branch is now
+  `sidebar-pro`.
 - Added **Copy conversation ID** to the conversation's right-click menu and header **…** menu. Copies the full
   session ID without opening the conversation, with success/error feedback and a fallback for plain HTTP origins.
+- Added **Copy conversation reference** to both menus, using OpenCode's existing `@session:ses_…` mentions without
+  attaching conversation history or changing the server API.
+- Added persistent client-local **Mark as unread / Mark as read** actions. Opening a conversation clears its manual
+  reminder, including navigation from outside the sidebar. Mark as read also acknowledges the existing server unread
+  result. Working, Completing, approval and input status retain priority; manual reminders do not invent a Dock outcome.
+- Moved the feature source to `shell/sidebar-pro` and renamed its symbols, while preserving storage and DOM contracts.
+- Made the upstream compatibility watcher run every six hours and removed its branch-name gate, avoiding silent skips
+  after renames. GitHub can delay or drop schedule events; a manual compatibility probe remains available.
 
 ## v2.2.5-sidebar.3 — 2026-11-07
 
@@ -63,7 +75,7 @@ Independent fork release based on official OpenCode **v2.2.5**. The bundled CLI 
 
 - **v2.2.5-sidebar.2:** uniform theme-aware **Completing 22m** shimmer, animated worker badge and updated demo
   screenshots; verified Windows update helper.
-- **v2.2.5-sidebar.1:** initial packaged Projects sidebar with custom groups, project icons, session moves,
+- **v2.2.5-sidebar.1:** initial packaged Sidebar Pro with custom groups, project icons, session moves,
   live attention/ongoing Dock, project customization and sidebar-only project hiding.
 
 ---

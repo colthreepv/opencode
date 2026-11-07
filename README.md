@@ -1,9 +1,9 @@
-# OpenCode · Projects sidebar
+# OpenCode · Sidebar Pro
 
-A maintained fork of [OpenCode](https://github.com/anomalyco/opencode) with a project sidebar inspired by Codex.
-Independent project; not built by or affiliated with the OpenCode team.
+A maintained fork of [OpenCode](https://github.com/anomalyco/opencode) with the Sidebar Pro project sidebar,
+inspired by Codex. Independent project; not built by or affiliated with the OpenCode team.
 
-<img src="docs/sidebar-projects.png" width="280" alt="Projects sidebar with custom groups, coloured project icons, nested conversations, a Needs attention dock and an idle Ongoing footer" />
+<img src="docs/sidebar-projects.png" width="280" alt="Sidebar Pro with custom groups, coloured project icons, nested conversations, a Needs attention dock and an idle Ongoing footer" />
 
 *Real web UI with demo projects, conversations and activity states. No private conversations are shown.*
 
@@ -18,14 +18,19 @@ Independent project; not built by or affiliated with the OpenCode team.
 - **Archived conversations:** toggle **Archived** in the compact toolbar to browse and restore history by group
   and project. Empty groups disappear, older pages remain reachable, and the live Dock stays put.
 - **Conversation actions:** Pin and Archive on hover/focus; right-click or **Shift+F10** for the full menu, including
-  **Fork conversation**. Pin, Fork and Archive are also available in the conversation header's **…** menu.
+  **Fork conversation**, **Copy conversation ID**, **Copy conversation reference** and **Mark as unread / Mark as read**.
+  The same actions are available in the conversation header's **…** menu.
+- **Conversation references:** copy the existing `@session:ses_…` mention format for another conversation on the same
+  server, even in a different repository. Copying does not attach history or add an agent-side conversation-reading tool.
+- **Unread reminders:** mark conversations unread locally without changing their activity status. Opening one clears its
+  reminder; Mark as read also uses OpenCode's existing server-side viewed state.
 - **Session moves:** drag a conversation to another project on the same server; running sessions offer queue or steer.
 - **Bottom Dock:** collapsible **Needs attention** for approvals, questions, failures and unread results; permanent
   **Ongoing** with a blue text shimmer while sessions run and a compact placeholder when idle.
 - **Resizable:** the Dock takes at most half the sidebar; lists scroll independently.
 - **Navigation:** mouse Back/Forward uses the same history as the keyboard commands.
 
-Enable it under **Settings → General → Interface mode → Projects**. Other interface modes remain available.
+Enable it under **Settings → General → Interface mode → Sidebar Pro**. Other interface modes remain available.
 
 ### Organize your projects
 
@@ -45,13 +50,14 @@ Edit a project's display name, choose a monochrome glyph or emoji, and pick its 
 Projects and conversations stay on your OpenCode server. Groups, project order, emoji/glyph choices and Dock preferences
 are client-local: browser localStorage, or the desktop client's `drafts.sqlite` (`state` table, `sidebar-projects` key).
 These layout preferences are not transferred automatically between browser and desktop.
-Pins and the archive-view preference are also client-local. Archiving a conversation is server-side and reversible;
+Pins, manual unread reminders and the archive-view preference are also client-local. Manual unread reminders do not sync
+to other clients. Archiving a conversation is server-side and reversible;
 it preserves the local pin and never deletes files or stops a running agent. A conversation-level fork copies the
 current history and opens it without sending a prompt.
 
 ## Branch and builds
 
-[`sidebar-projects`](https://github.com/colthreepv/opencode/tree/sidebar-projects) is this fork's default branch,
+[`sidebar-pro`](https://github.com/colthreepv/opencode/tree/sidebar-pro) is this fork's default branch,
 currently based on upstream **v2.2.5**. The branch is intended to be rebased onto upstream releases.
 Official OpenCode downloads do **not** include this sidebar.
 
@@ -75,10 +81,10 @@ The fork build helper is Windows-specific; other platforms have not been validat
 
 ## Fork automation
 
-- **Upstream compatibility:** a daily check watches stable **V2** releases, tries the sidebar branch on the new base
+- **Upstream compatibility:** a check every six hours watches stable **V2** releases, tries the sidebar branch on the new base
   in a disposable runner, and reports conflicts or check results in one issue per release. It never pushes a rebase
   or modifies the maintained branch. You can also run it manually from the Actions tab.
-- **Windows builds:** the manual **Sidebar Windows desktop** workflow downloads the official CLI for the declared base,
+- **Windows builds:** the manual **Sidebar Pro Windows desktop** workflow downloads the official CLI for the declared base,
   builds the desktop on a standard Windows runner, and uploads a ZIP with checksums and a build manifest.
   Artifacts expire automatically after **three days**. Published release assets are retained separately; there is no automatic
   release publication or desktop installation.
@@ -86,7 +92,7 @@ The fork build helper is Windows-specific; other platforms have not been validat
 To request a Windows package from the current maintained branch:
 
 ```sh
-gh workflow run sidebar-windows.yml --repo colthreepv/opencode --ref sidebar-projects
+gh workflow run sidebar-windows.yml --repo colthreepv/opencode --ref sidebar-pro
 ```
 
 Download the resulting artifact from the [Actions page](https://github.com/colthreepv/opencode/actions/workflows/sidebar-windows.yml),
@@ -117,16 +123,17 @@ The version contract lives in [`.github/sidebar/config.json`](.github/sidebar/co
 reviewing and accepting an upstream rebase. The inherited upstream workflows are disabled in this fork; newly introduced
 upstream workflows must be reviewed before enabling them.
 
-The upstream watcher runs at approximately **06:17 UTC daily** (GitHub schedules may be delayed). A normal manual run
+The upstream watcher runs at approximately **00:17, 06:17, 12:17 and 18:17 UTC** (GitHub schedules may be delayed or dropped).
+A normal manual run
 does nothing when the latest stable V2 release is not newer than the base, or this fork commit was already checked.
 To force a compatibility probe, including against the current base:
 
 ```sh
-gh workflow run sidebar-upstream.yml --repo colthreepv/opencode --ref sidebar-projects -f release_tag=v2.2.5
+gh workflow run sidebar-upstream.yml --repo colthreepv/opencode --ref sidebar-pro -f release_tag=v2.2.5
 ```
 
 Candidate code runs in a read-only job; a separate reporting job can update issues. A green report is a compatibility
 signal, not an automatic rebase approval or a substitute for a desktop interaction test.
 
-See the [implementation and rebase notes](packages/app/src/shell/sidebar-projects/PLAN.md) for maintenance details,
+See the [implementation and rebase notes](packages/app/src/shell/sidebar-pro/PLAN.md) for maintenance details,
 and the [upstream README](README.upstream.md) and [contributing guide](CONTRIBUTING.md) for the base project.

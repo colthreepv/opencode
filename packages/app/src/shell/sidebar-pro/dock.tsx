@@ -11,7 +11,7 @@ import { inboxArchived, type InboxEntry, type InboxStatus } from "@/shell/titleb
 import { compareWorking, workingSince } from "@/shell/titlebar/inbox-working"
 import { sessionTabTitle } from "@/shell/titlebar/tab-title"
 import { ProjectGlyph } from "./glyph"
-import { projectKey, useSidebarProjects } from "./state"
+import { projectKey, useSidebarPro } from "./state"
 import { sessionActivity } from "./session-activity"
 import { WorkerBadge } from "./worker-badge"
 
@@ -34,7 +34,7 @@ const RANK: Partial<Record<InboxStatus, number>> = { approval: 0, input: 0, fail
  */
 export function Dock() {
   const language = useLanguage()
-  const sidebar = useSidebarProjects()
+  const sidebar = useSidebarPro()
   const inbox = sidebar.inbox
 
   const [ui, setUi] = createStore<{
@@ -100,6 +100,7 @@ export function Dock() {
               selected={inbox.selected(entry())}
               now={inbox.now()}
               onOpen={() => {
+                sidebar.state.clearUnread(entry().server, entry().session.id)
                 inbox.open(entry())
                 inbox.markViewed(entry())
               }}

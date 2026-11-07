@@ -17,7 +17,7 @@ if (!stable(data.tag) || data.tag !== process.env.EXPECTED_TAG || data.sha !== p
 const issues = await pages(`/repos/${process.env.GITHUB_REPOSITORY}/issues?state=all`)
 const issue = selectIssue(issues, data.tag)
 const probe = data.tag === cfg.baseTag
-const title = probe ? `Sidebar compatibility probe: ${data.tag}` : `Sidebar compatibility with upstream ${data.tag}`
+const title = probe ? `Sidebar Pro compatibility probe: ${data.tag}` : `Sidebar Pro compatibility with upstream ${data.tag}`
 const run = `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
 const body = formatReport({ data, cfg, repository: process.env.GITHUB_REPOSITORY, run, encoded, issue })
 const endpoint = `/repos/${process.env.GITHUB_REPOSITORY}/issues${issue ? `/${issue.number}` : ""}`

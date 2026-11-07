@@ -12,7 +12,7 @@ import { ServerConnection, useServers } from "@/runtime/server/registry"
 import { useDialog } from "@opencode/ui/context/dialog"
 import type { LocalProject } from "@/shell/state/layout"
 import { inboxArchived, type InboxEntry } from "@/shell/titlebar/inbox-model"
-import { projectKey, useSidebarProjects } from "./state"
+import { projectKey, useSidebarPro } from "./state"
 import { ProjectGlyph } from "./glyph"
 import { GlyphPicker } from "./glyph-picker"
 import { GroupNameInput, ProjectGroup, UNGROUPED } from "./project-group"
@@ -39,7 +39,7 @@ export function ProjectTree() {
   const language = useLanguage()
   const global = useGlobal()
   const servers = useServers()
-  const sidebar = useSidebarProjects()
+  const sidebar = useSidebarPro()
   const [store, setStore] = createStore({ creating: false })
   const moveSession = createSessionMove()
   let tree!: HTMLDivElement
@@ -467,7 +467,7 @@ function ProjectRow(props: {
   const dialog = useDialog()
   const servers = useServers()
   const language = useLanguage()
-  const sidebar = useSidebarProjects()
+  const sidebar = useSidebarPro()
   const tabs = useTabs()
   const operation = useDragOperation()
 

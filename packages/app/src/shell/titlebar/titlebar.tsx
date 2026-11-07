@@ -18,7 +18,7 @@ import { applyPath, backPath, forwardPath, type HistoryLocation } from "./histor
 import { TitlebarTabStrip } from "@/shell/titlebar/tab-strip"
 import { macVerticalTrafficLights, SidebarToggle } from "@/shell/sidebar-toggle"
 import { SidebarInbox } from "@/shell/titlebar/inbox"
-import { SidebarProjects } from "@/shell/sidebar-projects/sidebar-projects"
+import { SidebarPro } from "@/shell/sidebar-pro/sidebar-pro"
 import { makeEventListener } from "@solid-primitives/event-listener"
 import { createMediaQuery } from "@solid-primitives/media"
 import { readSessionTabsRemovedDetail, SESSION_TABS_REMOVED_EVENT } from "@/shell/titlebar/session-events"
@@ -894,7 +894,7 @@ export function Titlebar(props: { verticalTabs?: { mount?: HTMLElement } }) {
                                   <SidebarInbox />
                                 </Match>
                                 <Match when={settings.appearance.tabLayout() === "projects"}>
-                                  <SidebarProjects />
+                                  <SidebarPro />
                                 </Match>
                               </Switch>
                             </div>

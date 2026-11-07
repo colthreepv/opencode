@@ -12,7 +12,7 @@ test("stable v2 tags and semantic release ordering", () => {
 })
 
 test("validates configuration and selects one exact issue including closed issues", () => {
-  const good = { upstream: "anomalyco/opencode", baseTag: "v2.2.5", branch: "sidebar-projects", mention: "colthreepv" }
+  const good = { upstream: "anomalyco/opencode", baseTag: "v2.2.5", branch: "sidebar-pro", mention: "colthreepv" }
   deepStrictEqual(config(good), good)
   for (const bad of [{ ...good, upstream: "other/repo" }, { ...good, baseTag: "v1.0.0" },
     { ...good, branch: "other" }, { ...good, mention: "x\n@all" }]) throws(() => config(bad))

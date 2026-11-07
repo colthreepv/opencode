@@ -7,7 +7,7 @@ const result = { tag: process.env.TAG, sha: process.env.FORK_SHA, base: cfg.base
 const safeEnv = {
   ...process.env,
   GIT_TERMINAL_PROMPT: "0", GIT_EDITOR: "true", GIT_SEQUENCE_EDITOR: "true",
-  GIT_COMMITTER_NAME: "Sidebar compatibility check",
+  GIT_COMMITTER_NAME: "Sidebar Pro compatibility check",
   GIT_COMMITTER_EMAIL: "41898282+github-actions[bot]@users.noreply.github.com",
 }
 delete safeEnv.GITHUB_OUTPUT

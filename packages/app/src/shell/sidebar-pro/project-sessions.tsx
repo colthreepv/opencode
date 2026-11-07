@@ -8,7 +8,7 @@ import type { LocalProject } from "@/shell/state/layout"
 import type { InboxEntry } from "@/shell/titlebar/inbox-model"
 import { createProjectPages } from "./archive-model"
 import { SessionRow } from "./session-row"
-import { projectKey, SHOWN_STEP, useSidebarProjects } from "./state"
+import { projectKey, SHOWN_STEP, useSidebarPro } from "./state"
 
 /**
  * An expanded project's root sessions: every pinned one, then the newest unpinned ones with "Show more", which pages
@@ -25,7 +25,7 @@ export function ProjectSessions(props: {
   pinned: InboxEntry[]
 }) {
   const language = useLanguage()
-  const sidebar = useSidebarProjects()
+  const sidebar = useSidebarPro()
   const global = useGlobal()
   const servers = useServers()
   // The archive is a transient view, so its length is not remembered like the normal list's.

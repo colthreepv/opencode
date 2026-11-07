@@ -9,7 +9,7 @@ import { Icon } from "@opencode/ui/icon"
 import { useLanguage } from "@/runtime/i18n/language"
 import { PluginConfirmDialog } from "@/runtime/plugin/dialogs"
 import { openContextMenuFromKeyboard } from "./keyboard"
-import { useSidebarProjects } from "./state"
+import { useSidebarPro } from "./state"
 
 export const UNGROUPED = "\0ungrouped"
 
@@ -55,7 +55,7 @@ export function ProjectGroup(props: {
   placeholder: boolean
   children: JSX.Element
 }) {
-  const sidebar = useSidebarProjects()
+  const sidebar = useSidebarPro()
   const language = useLanguage()
   const dialog = useDialog()
   const [store, setStore] = createStore({ editing: false })

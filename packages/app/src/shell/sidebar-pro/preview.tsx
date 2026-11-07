@@ -18,7 +18,7 @@ const dock = [
 ] as const
 
 /** Settings > Interface preview of the Projects mode; the shared workspace drawing comes in as children. */
-export function SidebarProjectsPreview(props: ParentProps) {
+export function SidebarProPreview(props: ParentProps) {
   return (
     <div data-slot="preview-body">
       <div data-slot="preview-rail" data-variant="projects">

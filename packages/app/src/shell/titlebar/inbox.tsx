@@ -325,7 +325,7 @@ function InboxRow(props: {
                   {/* Keep the status colour under the sweep.
                       REBASE: upstream #61445 replaces this row's shimmer with an activity ring + elapsed time.
                       Accept that upstream row; retain the Dock's shimmer and the --text-shimmer-color CSS hook.
-                      See sidebar-projects/PLAN.md for the fork's rebase policy. */}
+                      See sidebar-pro/PLAN.md for the fork's rebase policy. */}
                   <span aria-hidden="true" class="[--text-shimmer-color:var(--v2-state-fg-info)]">
                     <TextShimmer text={working()} active />
                   </span>

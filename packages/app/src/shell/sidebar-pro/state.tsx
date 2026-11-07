@@ -1,11 +1,13 @@
 import { Schema } from "effect"
 import type { SessionInfo } from "@opencode/client/promise"
-import { createContext, useContext, type ParentProps } from "solid-js"
+import { createContext, createEffect, on, useContext, type ParentProps } from "solid-js"
 import { produce } from "solid-js/store"
 import { uuid } from "@opencode/util/uuid"
 import { Persistence } from "@/runtime/persistence/schema"
 import { Persist, persisted } from "@/runtime/persistence/storage"
 import type { ServerConnection } from "@/runtime/server/registry"
+import { useGlobal } from "@/runtime/server/runtime"
+import { useLayout } from "@/shell/state/layout"
 import { createSessionInbox, type SessionInbox } from "@/shell/titlebar/inbox-model"
 import { pathKey } from "@/workspaces/path-key"
 
@@ -19,7 +21,7 @@ const Glyph = Schema.Union([
 
 export type ProjectGlyph = typeof Glyph.Type
 
-const SidebarProjectsState = Persistence.struct({
+const SidebarProState = Persistence.struct({
   groups: Persistence.array(
     Persistence.struct({
       id: Schema.String,
@@ -32,6 +34,7 @@ const SidebarProjectsState = Persistence.struct({
   expanded: Persistence.record(Schema.Literal(true)),
   hidden: Persistence.record(Schema.Literal(true)),
   pins: Persistence.record(Schema.String),
+  unread: Persistence.record(Schema.Literal(true)),
   archived: Schema.Boolean,
   shown: Persistence.record(Schema.Finite),
   dock: Persistence.struct({
@@ -48,15 +51,16 @@ export function projectKey(server: ServerConnection.Key, worktree: string) {
   return `${server}\0${pathKey(worktree)}`
 }
 
-/** Client-local layout of the Projects sidebar: user groups, project placement and per-project view state. */
-export function createSidebarProjectsState() {
-  const [store, setStore, , ready] = persisted(Persist.global("sidebar-projects"), SidebarProjectsState, {
+/** Client-local Sidebar Pro preferences. The persisted key stays stable across the branding rename. */
+export function createSidebarProState() {
+  const [store, setStore, , ready] = persisted(Persist.global("sidebar-projects"), SidebarProState, {
     groups: [],
     placement: {},
     glyphs: {},
     expanded: {},
     hidden: {},
     pins: {},
+    unread: {},
     archived: false,
     shown: {},
     dock: { attentionCollapsed: false },
@@ -185,6 +189,19 @@ export function createSidebarProjectsState() {
       )
     },
     pinned: (server: ServerConnection.Key, sessionID: string) => !!store.pins[`${server}\0${sessionID}`],
+    unread: (server: ServerConnection.Key, sessionID: string) => !!store.unread[`${server}\0${sessionID}`],
+    markUnread(server: ServerConnection.Key, sessionID: string) {
+      if (!ready()) return
+      setStore("unread", `${server}\0${sessionID}`, true)
+    },
+    clearUnread(server: ServerConnection.Key, sessionID: string) {
+      if (!ready() || !store.unread[`${server}\0${sessionID}`]) return
+      setStore(
+        produce((draft) => {
+          delete draft.unread[`${server}\0${sessionID}`]
+        }),
+      )
+    },
     togglePin(server: ServerConnection.Key, session: SessionInfo, worktree = session.location.directory) {
       if (!ready()) return
       const key = `${server}\0${session.id}`
@@ -209,38 +226,62 @@ export function createSidebarProjectsState() {
   }
 }
 
-export type SidebarProjectsStore = ReturnType<typeof createSidebarProjectsState>
+export type SidebarProStore = ReturnType<typeof createSidebarProState>
 
-const SidebarProjectsStateContext = createContext<SidebarProjectsStore>()
+const SidebarProStateContext = createContext<SidebarProStore>()
 
 /** Preferences are shared with conversation-header actions, without starting an inbox in other interface modes. */
-export function SidebarProjectsStateProvider(props: ParentProps) {
-  const state = createSidebarProjectsState()
+export function SidebarProStateProvider(props: ParentProps) {
+  const state = createSidebarProState()
+  const layout = useLayout()
+  const global = useGlobal()
 
-  return <SidebarProjectsStateContext.Provider value={state}>{props.children}</SidebarProjectsStateContext.Provider>
+  // Clear on entering a conversation from any surface, not on changes to its unread reminder.
+  // In particular, marking the currently open conversation unread must survive until the next opening.
+  createEffect(
+    on(
+      () => {
+        const route = layout.route()
+
+        return state.ready() && route.type === "session" ? `${route.server}\0${route.sessionId}` : undefined
+      },
+      (key) => {
+        if (!key) return
+        const route = layout.route()
+
+        if (route.type !== "session") return
+        state.clearUnread(route.server, route.sessionId)
+        const ctx = global.serverCtx(route.server)
+
+        if (ctx) state.clearUnread(route.server, ctx.data.session.root(route.sessionId))
+      },
+    ),
+  )
+
+  return <SidebarProStateContext.Provider value={state}>{props.children}</SidebarProStateContext.Provider>
 }
 
-export function useSidebarProjectsState() {
-  const state = useContext(SidebarProjectsStateContext)
+export function useSidebarProState() {
+  const state = useContext(SidebarProStateContext)
 
-  if (!state) throw new Error("useSidebarProjectsState must be used within SidebarProjectsStateProvider")
+  if (!state) throw new Error("useSidebarProState must be used within SidebarProStateProvider")
 
   return state
 }
 
-const SidebarProjectsContext = createContext<{ state: SidebarProjectsStore; inbox: SessionInbox }>()
+const SidebarProContext = createContext<{ state: SidebarProStore; inbox: SessionInbox }>()
 
 /** One store and one session inbox shared by the tree and the dock. */
-export function SidebarProjectsProvider(props: ParentProps) {
-  const value = { state: useSidebarProjectsState(), inbox: createSessionInbox() }
+export function SidebarProProvider(props: ParentProps) {
+  const value = { state: useSidebarProState(), inbox: createSessionInbox() }
 
-  return <SidebarProjectsContext.Provider value={value}>{props.children}</SidebarProjectsContext.Provider>
+  return <SidebarProContext.Provider value={value}>{props.children}</SidebarProContext.Provider>
 }
 
-export function useSidebarProjects() {
-  const value = useContext(SidebarProjectsContext)
+export function useSidebarPro() {
+  const value = useContext(SidebarProContext)
 
-  if (!value) throw new Error("useSidebarProjects must be used within SidebarProjectsProvider")
+  if (!value) throw new Error("useSidebarPro must be used within SidebarProProvider")
 
   return value
 }
