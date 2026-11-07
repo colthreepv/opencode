@@ -1,5 +1,5 @@
 /* Extends the shared Settings > Interface preview (settings/general/interface-mode.css). */
-[data-slot="interface-mode-preview"] [data-slot="preview-rail"][data-variant="projects"] {
+[data-slot="interface-mode-sketch"] [data-slot="preview-rail"][data-variant="projects"] {
   gap: 0;
   padding-bottom: 4px;
 

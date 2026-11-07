@@ -11,7 +11,7 @@ import { useGlobal } from "@/runtime/server/runtime"
 import { ServerConnection, useServers } from "@/runtime/server/registry"
 import { useDialog } from "@opencode/ui/context/dialog"
 import type { LocalProject } from "@/shell/state/layout"
-import { inboxArchived, type InboxEntry } from "@/shell/titlebar/inbox-model"
+import { inboxArchived, inboxBusy, type InboxEntry } from "@/shell/titlebar/inbox-model"
 import { projectKey, useSidebarPro } from "./state"
 import { ProjectGlyph } from "./glyph"
 import { GlyphPicker } from "./glyph-picker"
@@ -50,10 +50,11 @@ export function ProjectTree() {
   const connections = createMemo(
     () =>
       new Map(
-        servers.visible.map((conn) => {
+        servers.visible.flatMap((conn) => {
           const server = ServerConnection.key(conn)
+          const ctx = global.serverCtx(server)
 
-          return [String(server), { conn, server, ctx: global.ensureServerCtx(conn) }] as const
+          return ctx ? [[String(server), { conn, server, ctx }] as const] : []
         }),
       ),
   )
@@ -72,6 +73,18 @@ export function ProjectTree() {
     ),
   )
 
+  // Activity belongs to the whole project, not just the visible page or the current archive mode.
+  const busyProjects = createMemo(
+    () =>
+      new Set(
+        sidebar.inbox.entries().flatMap((entry) => {
+          const project = entry.ctx.projects.forSession(entry.session)
+
+          return project && inboxBusy(entry.status) ? [projectKey(entry.server, project.worktree)] : []
+        }),
+      ),
+  )
+
   // Pins are grouped by the session's current project, which can differ from the directory stored when pinning.
   const pinned = createMemo(() =>
     Map.groupBy(
@@ -88,7 +101,7 @@ export function ProjectTree() {
 
         const entry: InboxEntry = known
           ? { ...known, session }
-          : { key, conn: item.conn, server: item.server, ctx: item.ctx, session, status: "ready" }
+          : { key, conn: item.conn, server: item.server, ctx: item.ctx, session, status: "ready", since: undefined }
 
         return [{ key: projectKey(item.server, project.worktree), project, entry }]
       }),
@@ -382,6 +395,7 @@ export function ProjectTree() {
                               project={item().project}
                               server={item().server}
                               archived={archived()}
+                              busy={busyProjects().has(key)}
                               entries={(sessions().get(key) ?? []).map((value) => value.entry)}
                               pinned={(pinned().get(key) ?? [])
                                 .map((value) => value.entry)

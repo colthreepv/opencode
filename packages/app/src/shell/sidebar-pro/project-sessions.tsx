@@ -8,6 +8,7 @@ import type { LocalProject } from "@/shell/state/layout"
 import type { InboxEntry } from "@/shell/titlebar/inbox-model"
 import { createProjectPages } from "./archive-model"
 import { SessionRow } from "./session-row"
+import { SessionOrder } from "./session-order-machine"
 import { projectKey, SHOWN_STEP, useSidebarPro } from "./state"
 
 /**
@@ -19,6 +20,7 @@ export function ProjectSessions(props: {
   project: LocalProject
   server: ServerConnection.Key
   archived: boolean
+  busy: boolean
   /** Known root sessions of this project in the current mode, from the inbox and the live store. */
   entries: InboxEntry[]
   /** Pinned root sessions of this project in the current mode, newest first. */
@@ -34,9 +36,11 @@ export function ProjectSessions(props: {
   const item = createMemo(() => {
     const conn = servers.visible.find((value) => ServerConnection.key(value) === props.server)
 
-    if (!conn) return
+    const ctx = global.serverCtx(props.server)
 
-    return { conn, key: props.id, server: props.server, ctx: global.ensureServerCtx(conn), project: props.project }
+    if (!conn || !ctx) return
+
+    return { conn, key: props.id, server: props.server, ctx, project: props.project }
   })
 
   const pages = createProjectPages({ item, archived: () => props.archived })
@@ -64,7 +68,17 @@ export function ProjectSessions(props: {
             )
               return []
 
-            return [{ key, conn: current.conn, server: props.server, ctx: current.ctx, session, status: "ready" }]
+            return [
+              {
+                key,
+                conn: current.conn,
+                server: props.server,
+                ctx: current.ctx,
+                session,
+                status: "ready",
+                since: undefined,
+              },
+            ]
           })
       : []
 
@@ -75,12 +89,19 @@ export function ProjectSessions(props: {
 
   const byKey = createMemo(() => new Map([...props.pinned, ...unpinned()].map((entry) => [entry.key, entry] as const)))
 
-  const visible = createMemo(() => [
-    ...props.pinned.map((entry) => entry.key),
-    ...unpinned()
-      .slice(0, shown())
-      .map((entry) => entry.key),
-  ])
+  const order = createMemo<SessionOrder.State>(
+    (previous) =>
+      SessionOrder.transition(previous, {
+        type: "reconcile",
+        busy: props.busy,
+        archived: props.archived,
+        pinned: props.pinned.map((entry) => entry.key),
+        unpinned: unpinned().map((entry) => entry.key),
+      }),
+    { type: "idle", archived: props.archived, pinned: [], unpinned: [] },
+  )
+
+  const visible = createMemo(() => [...order().pinned, ...order().unpinned.slice(0, shown())])
 
   const showMore = () => {
     if (props.archived) setStore("shown", store.shown + SHOWN_STEP)

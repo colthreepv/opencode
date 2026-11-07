@@ -25,7 +25,8 @@ const git = (...args) => command(`git ${args[0]}`, ["git", ...args])
 let ok = git("checkout", "--detach", result.sha) &&
   git("fetch", "--no-tags", `https://github.com/${cfg.upstream}.git`, `refs/tags/${result.base}:refs/tags/sidebar-base`) &&
   git("fetch", "--no-tags", `https://github.com/${cfg.upstream}.git`, `refs/tags/${result.tag}:refs/tags/sidebar-candidate`) &&
-  git("-c", "core.hooksPath=/dev/null", "rebase", "--onto", "refs/tags/sidebar-candidate", "refs/tags/sidebar-base")
+  // Preserve the maintained branch's merge resolutions; replaying only non-merge commits loses those adaptations.
+  git("-c", "core.hooksPath=/dev/null", "merge", "--no-commit", "--no-ff", "refs/tags/sidebar-candidate")
 if (!ok) {
   const conflicts = spawnSync("git", ["diff", "--name-only", "--diff-filter=U", "-z"], { encoding: "utf8", env: safeEnv })
   const names = (conflicts.stdout || "").split("\0").filter(Boolean).slice(0, 100)

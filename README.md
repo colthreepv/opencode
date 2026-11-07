@@ -14,7 +14,8 @@ inspired by Codex. Independent project; not built by or affiliated with the Open
 - **Project actions:** edit the display name, icon and colour; start a session with `+`, or hide a project from the sidebar
   and restore it from the toolbar's **… → Hidden projects** menu. Hiding never deletes its files or conversations.
 - **Nested conversations and pins:** pinned conversations stay above the newest five unpinned sessions per project,
-  with **Show more** for older sessions. Each set is ordered by its last update.
+  with **Show more** for older sessions. Each set is ordered by its last update when the project is idle. While any
+  conversation is working or waiting for approval/input, existing rows stay put; new conversations lead their section.
 - **Archived conversations:** toggle **Archived** in the compact toolbar to browse and restore history by group
   and project. Empty groups disappear, older pages remain reachable, and the live Dock stays put.
 - **Conversation actions:** Pin and Archive on hover/focus; right-click or **Shift+F10** for the full menu, including
@@ -58,7 +59,7 @@ current history and opens it without sending a prompt.
 ## Branch and builds
 
 [`sidebar-pro`](https://github.com/colthreepv/opencode/tree/sidebar-pro) is this fork's default branch,
-currently based on upstream **v2.2.5**. The branch is intended to be rebased onto upstream releases.
+currently based on upstream **v2.2.6**. Accepted stable V2 releases are merged or rebased after compatibility review.
 Official OpenCode downloads do **not** include this sidebar.
 
 Download the [latest Windows release](https://github.com/colthreepv/opencode/releases/latest) and read the
@@ -82,7 +83,7 @@ The fork build helper is Windows-specific; other platforms have not been validat
 ## Fork automation
 
 - **Upstream compatibility:** a check every six hours watches stable **V2** releases, tries the sidebar branch on the new base
-  in a disposable runner, and reports conflicts or check results in one issue per release. It never pushes a rebase
+  in a disposable runner, and reports conflicts or check results in one issue per release. It never pushes an update
   or modifies the maintained branch. You can also run it manually from the Actions tab.
 - **Windows builds:** the manual **Sidebar Pro Windows desktop** workflow downloads the official CLI for the declared base,
   builds the desktop on a standard Windows runner, and uploads a ZIP with checksums and a build manifest.
@@ -120,7 +121,7 @@ extracted Actions artifact containing the app ZIP, `SHA256SUMS` and `build-manif
 checkout when migrating a fork launched from `dist/desktop/app`, so its exact path is recognized.
 
 The version contract lives in [`.github/sidebar/config.json`](.github/sidebar/config.json). Update `baseTag` only after
-reviewing and accepting an upstream rebase. The inherited upstream workflows are disabled in this fork; newly introduced
+reviewing and accepting an upstream update. The inherited upstream workflows are disabled in this fork; newly introduced
 upstream workflows must be reviewed before enabling them.
 
 The upstream watcher runs at approximately **00:17, 06:17, 12:17 and 18:17 UTC** (GitHub schedules may be delayed or dropped).
@@ -129,11 +130,11 @@ does nothing when the latest stable V2 release is not newer than the base, or th
 To force a compatibility probe, including against the current base:
 
 ```sh
-gh workflow run sidebar-upstream.yml --repo colthreepv/opencode --ref sidebar-pro -f release_tag=v2.2.5
+gh workflow run sidebar-upstream.yml --repo colthreepv/opencode --ref sidebar-pro -f release_tag=v2.2.6
 ```
 
 Candidate code runs in a read-only job; a separate reporting job can update issues. A green report is a compatibility
-signal, not an automatic rebase approval or a substitute for a desktop interaction test.
+signal, not an automatic update approval or a substitute for a desktop interaction test.
 
-See the [implementation and rebase notes](packages/app/src/shell/sidebar-pro/PLAN.md) for maintenance details,
+See the [implementation and maintenance notes](packages/app/src/shell/sidebar-pro/PLAN.md) for maintenance details,
 and the [upstream README](README.upstream.md) and [contributing guide](CONTRIBUTING.md) for the base project.

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test"
-import { project, SERVER, sessionHref } from "../utils/app"
+import { project, SERVER, session, sessionHref } from "../utils/app"
 import {
   openProjectsSidebar,
   pinnedSession,
@@ -7,6 +7,281 @@ import {
   sidebarProjectKey,
 } from "../utils/sidebar-projects"
 import { APP_READY_TIMEOUT, expectSessionTitle } from "../utils/waits"
+
+test("holds each project's pinned and unpinned order until its last running root finishes", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  const directory = "C:/OpenCode/Stable Order"
+  const { sidebar, sessions, push } = await openProjectsSidebar(page, {
+    name: "Stable Order",
+    directory,
+    sessions: Array.from({ length: 8 }, (_, index) => ({
+      id: `ses_stable_${index}`,
+      title: `Conversation ${index}`,
+      directory,
+      time: { created: 1, updated: 100 - index },
+    })),
+    seed: { tabs: [] },
+    sidebar: {
+      expanded: { [sidebarProjectKey(SERVER, directory)]: true },
+      pins: {
+        ...pinnedSession(SERVER, "ses_stable_0", directory),
+        ...pinnedSession(SERVER, "ses_stable_1", directory),
+      },
+    },
+  })
+  const titles = sidebar.sessions.getByRole("treeitem").locator('[dir="auto"]')
+  await expect(titles).toHaveText([
+    "Conversation 0",
+    "Conversation 1",
+    "Conversation 2",
+    "Conversation 3",
+    "Conversation 4",
+    "Conversation 5",
+    "Conversation 6",
+  ])
+  await expect(sidebar.showMore).toBeVisible()
+
+  const running = async (index: number) => {
+    await push([
+      {
+        id: `evt_start_${index}`,
+        created: 200 + index,
+        durable: { aggregateID: `ses_stable_${index}`, seq: 1, version: 1 },
+        type: "session.execution.started",
+        data: { sessionID: `ses_stable_${index}` },
+      },
+    ])
+    await expect(
+      sidebar.tree.getByRole("treeitem", { name: `Conversation ${index} Working`, exact: true }),
+    ).toBeVisible()
+  }
+  await running(0)
+  await running(1)
+  await running(2)
+  await running(3)
+
+  // Rename events re-read the server projection, including its updated timestamp, just as execution events do.
+  const update = async (index: number, updated: number) => {
+    sessions[index].title = `Updated ${index}`
+    sessions[index].time.updated = updated
+    await push([
+      {
+        id: `evt_update_${index}`,
+        created: updated,
+        durable: { aggregateID: sessions[index].id, seq: 2, version: 1 },
+        type: "session.renamed",
+        data: { sessionID: sessions[index].id, title: sessions[index].title },
+      },
+    ])
+    await expect(titles.filter({ hasText: `Updated ${index}` })).toHaveText(`Updated ${index}`)
+  }
+  await update(1, 300)
+  await update(3, 400)
+  await expect(titles).toHaveText([
+    "Conversation 0",
+    "Updated 1",
+    "Conversation 2",
+    "Updated 3",
+    "Conversation 4",
+    "Conversation 5",
+    "Conversation 6",
+  ])
+  await update(0, 500)
+  await update(2, 600)
+
+  // Newly discovered roots must be immediately visible, without reshuffling existing rows or lifting the five-row limit.
+  sessions.push(
+    session({
+      id: "ses_stable_new",
+      title: "New conversation",
+      directory,
+      projectID: "proj_stable_order",
+      time: { created: 700, updated: 700 },
+    }),
+  )
+  await push([
+    {
+      id: "evt_new_root",
+      created: 700,
+      durable: { aggregateID: "ses_stable_new", seq: 1, version: 1 },
+      type: "session.created",
+      data: {
+        sessionID: "ses_stable_new",
+        projectID: "proj_stable_order",
+        location: { directory },
+        slug: "stable-new",
+        version: "dev",
+      },
+    },
+  ])
+  await expect(titles).toHaveText([
+    "Updated 0",
+    "Updated 1",
+    "New conversation",
+    "Updated 2",
+    "Updated 3",
+    "Conversation 4",
+    "Conversation 5",
+  ])
+  await sidebar.showMore.click()
+  await expect(titles).toHaveText([
+    "Updated 0",
+    "Updated 1",
+    "New conversation",
+    "Updated 2",
+    "Updated 3",
+    "Conversation 4",
+    "Conversation 5",
+    "Conversation 6",
+    "Conversation 7",
+  ])
+  await expect(sidebar.showMore).toHaveCount(0)
+
+  const finish = async (index: number, updated: number) => {
+    sessions[index].time.updated = updated
+    await push([
+      {
+        id: `evt_finish_${index}`,
+        created: updated,
+        durable: { aggregateID: sessions[index].id, seq: 3, version: 1 },
+        type: "session.execution.succeeded",
+        data: { sessionID: sessions[index].id },
+      },
+    ])
+    await expect(sidebar.tree.getByRole("treeitem", { name: `Updated ${index}`, exact: true })).toHaveAttribute(
+      "data-status",
+      "ready",
+    )
+  }
+  await finish(0, 800)
+  await finish(1, 900)
+  await finish(2, 1_000)
+  // A completed root cannot reorder either section while another root in the same project is still working.
+  await expect(titles).toHaveText([
+    "Updated 0",
+    "Updated 1",
+    "New conversation",
+    "Updated 2",
+    "Updated 3",
+    "Conversation 4",
+    "Conversation 5",
+    "Conversation 6",
+    "Conversation 7",
+  ])
+  await finish(3, 1_100)
+  await expect(titles).toHaveText([
+    "Updated 1",
+    "Updated 0",
+    "Updated 3",
+    "Updated 2",
+    "New conversation",
+    "Conversation 4",
+    "Conversation 5",
+    "Conversation 6",
+    "Conversation 7",
+  ])
+})
+
+test("reconciles membership while waiting for approval without freezing another project", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  const directory = "C:/OpenCode/Waiting Order"
+  const other = "C:/OpenCode/Other Order"
+  const { sidebar, sessions, push } = await openProjectsSidebar(page, {
+    name: "Waiting Order",
+    directory,
+    projects: [project({ id: "proj_other_order", directory: other, name: "Other Order" })],
+    sessions: [
+      ...["Waiting", "Second", "Third", "Fourth"].map((title, index) => ({
+        id: `ses_waiting_${index}`,
+        title,
+        directory,
+        time: { created: 1, updated: 100 - index },
+      })),
+      { id: "ses_other_0", title: "Other first", directory: other, projectID: "proj_other_order", created: 100 },
+      { id: "ses_other_1", title: "Other second", directory: other, projectID: "proj_other_order", created: 99 },
+    ],
+    seed: { tabs: [] },
+    sidebar: { expanded: { [sidebarProjectKey(SERVER, directory)]: true, [sidebarProjectKey(SERVER, other)]: true } },
+  })
+  const titles = sidebar.project("Waiting Order").getByRole("treeitem").locator('[dir="auto"]')
+  const otherTitles = sidebar.project("Other Order").getByRole("treeitem").locator('[dir="auto"]')
+  await expect(titles).toHaveText(["Waiting", "Second", "Third", "Fourth"])
+  await expect(otherTitles).toHaveText(["Other first", "Other second"])
+  await push([
+    {
+      id: "evt_order_approval",
+      created: 200,
+      type: "permission.asked",
+      location: { directory },
+      data: {
+        id: "permission_order",
+        sessionID: "ses_waiting_0",
+        action: "shell",
+        resources: ["git status"],
+        metadata: {},
+        save: [],
+      },
+    },
+  ])
+  await expect(sidebar.tree.getByRole("treeitem", { name: "Waiting Approval", exact: true })).toHaveAttribute(
+    "data-status",
+    "approval",
+  )
+
+  sessions[1].title = "Second updated"
+  sessions[1].time.updated = 300
+  sessions[5].title = "Other second updated"
+  sessions[5].time.updated = 400
+  await push([
+    {
+      id: "evt_order_wait_update",
+      created: 300,
+      durable: { aggregateID: sessions[1].id, seq: 1, version: 1 },
+      type: "session.renamed",
+      data: { sessionID: sessions[1].id, title: sessions[1].title },
+    },
+    {
+      id: "evt_order_other_update",
+      created: 400,
+      durable: { aggregateID: sessions[5].id, seq: 1, version: 1 },
+      type: "session.renamed",
+      data: { sessionID: sessions[5].id, title: sessions[5].title },
+    },
+  ])
+  await expect(titles).toHaveText(["Waiting", "Second updated", "Third", "Fourth"])
+  await expect(otherTitles).toHaveText(["Other second updated", "Other first"])
+
+  await sidebar.session("Third").click({ button: "right" })
+  await page.getByRole("menuitem", { name: "Pin conversation", exact: true }).click()
+  await expect(titles).toHaveText(["Third", "Waiting", "Second updated", "Fourth"])
+  await sidebar.session("Third").click({ button: "right" })
+  await page.getByRole("menuitem", { name: "Unpin conversation", exact: true }).click()
+  await expect(titles).toHaveText(["Third", "Waiting", "Second updated", "Fourth"])
+  await sidebar.row("Fourth").hover()
+  await sidebar.archive("Fourth").click()
+  await expect(titles).toHaveText(["Third", "Waiting", "Second updated"])
+
+  await push([
+    {
+      id: "evt_order_delete",
+      created: 500,
+      durable: { aggregateID: "ses_waiting_2", seq: 1, version: 2 },
+      type: "session.deleted",
+      data: { sessionID: "ses_waiting_2" },
+    },
+  ])
+  await expect(titles).toHaveText(["Waiting", "Second updated"])
+  await push([
+    {
+      id: "evt_order_reply",
+      created: 600,
+      type: "permission.replied",
+      location: { directory },
+      data: { sessionID: "ses_waiting_0", requestID: "permission_order", reply: "once" },
+    },
+  ])
+  await expect(titles).toHaveText(["Second updated", "Waiting"])
+})
 
 test("keeps a pinned conversation beyond the first page above the newest ones and pages the rest", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })

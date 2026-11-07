@@ -28,6 +28,7 @@ export function SidebarProSessionMenuItems(props: { session: SessionInfo | undef
       ctx: server.ctx,
       session,
       status: "ready",
+      since: undefined,
     }
   })
 
