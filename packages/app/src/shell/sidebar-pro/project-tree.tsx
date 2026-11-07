@@ -8,6 +8,7 @@ import { Tooltip } from "@opencode/ui/tooltip"
 import { displayName } from "@opencode/ui/project-avatar"
 import { useLanguage } from "@/runtime/i18n/language"
 import { useGlobal } from "@/runtime/server/runtime"
+import { ServerProvider } from "@/runtime/server/current"
 import { ServerConnection, useServers } from "@/runtime/server/registry"
 import { useDialog } from "@opencode/ui/context/dialog"
 import type { LocalProject } from "@/shell/state/layout"
@@ -508,8 +509,13 @@ function ProjectRow(props: {
   const openGlyph = () => {
     const server = servers.visible.find((item) => ServerConnection.key(item) === props.server)
 
-    if (server)
-      void dialog.show(() => <GlyphPicker project={props.project} server={server} projectKey={props.projectKey} />)
+    if (!server) return
+
+    void dialog.show(() => (
+      <ServerProvider conn={server}>
+        <GlyphPicker project={props.project} server={server} projectKey={props.projectKey} />
+      </ServerProvider>
+    ))
   }
 
   return (
