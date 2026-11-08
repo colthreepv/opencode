@@ -1,8 +1,6 @@
 name: Sidebar Pro upstream compatibility
 
 on:
-  schedule:
-    - cron: '17 */6 * * *'
   workflow_dispatch:
     inputs:
       release_tag:
