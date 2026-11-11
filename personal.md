@@ -29,6 +29,9 @@ Do not change the fork's default branch.
 
 ## Verify and build
 
+The personal desktop preserves a registered background process while it is alive. A stale registration whose
+PID has exited no longer prevents the desktop from starting the background service.
+
 Personal packages use **OpenCode Personal**, app ID `ai.opencode.desktop.personal`, and the red icons in
 `packages/desktop/icons/personal`. The technical channel remains `dev` for the existing service/updater policy.
 The desktop profile is separate from older OpenCode Dev builds; conversations stay on the shared service.

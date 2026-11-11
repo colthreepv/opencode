@@ -11,6 +11,7 @@ import { keptStages, serviceVersion, shouldRetryEnsure } from "./cli-version"
 import { DesktopCli } from "./desktop-cli"
 import { SidecarCredentials } from "./sidecar-credentials"
 import { takeSidecarProbe } from "./sidecar-probe"
+import { hasRunningService } from "./service-registration"
 
 export * as BackgroundService from "./background-service"
 
@@ -75,9 +76,13 @@ const ensure = Effect.fn("BackgroundService.ensure")(function* (mode: Background
         runFork(Effect.logInfo("v2 CLI background service starting", { reason, previousVersion })),
     })
 
-  // Fork: ensure may replace an unhealthy incumbent even without a required version. A shared registration is
-  // read-only in this dev-channel build; discovery may fail, but must never replace the user's service.
-  const attachOnly = CHANNEL === "dev" && !setup.isolated && (yield* fs.exists(setup.file ?? setup.client.fallback()))
+  // Fork: ensure may replace an unhealthy incumbent even without a required version. Preserve a live shared
+  // process, but let ensure recover a stale registration after its owner has exited.
+  const attachOnly =
+    CHANNEL === "dev" &&
+    !setup.isolated &&
+    (yield* fs.exists(setup.file ?? setup.client.fallback())) &&
+    hasRunningService(yield* fs.readFileString(setup.file ?? setup.client.fallback()))
   const service = yield* Effect.tryPromise(async () => {
     if (attachOnly) {
       const existing = await setup.client.Service.discover({ file: setup.file })
