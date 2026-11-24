@@ -10,6 +10,7 @@ import { Effect, Schema, Stream } from "effect"
 import { Agent } from "../agent.js"
 import { Artifact } from "../artifact.js"
 import { AISDK } from "../aisdk.js"
+import { Automation } from "../automation.js"
 import { Command } from "../command.js"
 import { Credential } from "../credential.js"
 import { Bus } from "../bus.js"
@@ -51,9 +52,10 @@ const isRpcEvent = (event: Event.Payload): event is RpcEvent => isRpcType(event.
 const isPublicEvent = (event: Event.Payload): event is EventManifest.ServerEvent | RpcEvent =>
   EventManifest.isServer(event) || isRpcEvent(event)
 export const make = Effect.fn("PluginHost.make")(function* (plugin: Pick<Interface, "list">, pluginID: string) {
-  const app = yield* App.Metadata
+  const app = yield* App.Service
   const agents = yield* Agent.Service
   const artifacts = yield* Artifact.Service
+  const automations = yield* Automation.Service
   const aisdk = yield* AISDK.Service
   const providers = yield* Provider.Service
   const models = yield* Model.Service
@@ -316,6 +318,12 @@ export const make = Effect.fn("PluginHost.make")(function* (plugin: Pick<Interfa
               },
             })
           }),
+      },
+      automation: {
+        // A plugin has no UI listener to answer an interactive ask, so asks settle unattended, as they do over HTTP.
+        create: (input) => automations.create(input).pipe(Effect.provideService(Permission.Unattended, [])),
+        list: (input) => automations.list(input),
+        delete: (input) => automations.remove(input.automationID),
       },
     },
     generate: {
@@ -588,7 +596,7 @@ export const make = Effect.fn("PluginHost.make")(function* (plugin: Pick<Interfa
       switchAgent: sessions.switchAgent,
       switchModel: sessions.switchModel,
       prompt: sessions.prompt,
-      generate: (input) => sessions.generate(input).pipe(Effect.map((text) => ({ text }))),
+      generate: sessions.generate,
       command: (input) => sessions.command({ ...input, command: input.name }),
       compact: sessions.compact,
       update: Effect.fn(function* (input) {
@@ -635,6 +643,7 @@ export const requirements = LayerNode.group([
   Agent.node,
   Artifact.node,
   AISDK.node,
+  Automation.node,
   Provider.node,
   Model.node,
   Command.node,
@@ -711,6 +720,7 @@ function methodImplementation(input: IntegrationMethodRegistration): Integration
           }),
         ),
       ...(refresh ? { refresh: (value: Credential.OAuth) => refresh(value).pipe(Effect.map(credential)) } : {}),
+      ...(input.revoke ? { revoke: input.revoke } : {}),
       ...(input.label ? { label: input.label } : {}),
     }
   }

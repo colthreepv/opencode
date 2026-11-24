@@ -1,5 +1,5 @@
 import { Key } from "@solid-primitives/keyed"
-import { createMemo, For, Show, type JSX } from "solid-js"
+import { createEffect, createMemo, For, onCleanup, Show, type JSX } from "solid-js"
 import { Button } from "@opencode/ui/button"
 import { Icon } from "@opencode/ui/icon"
 import { IconButton } from "@opencode/ui/icon-button"
@@ -60,15 +60,31 @@ export function ProjectTree() {
       ),
   )
 
+  // Unlike the inbox, project ordering follows passive metadata updates too.
+  createEffect(() => {
+    connections().forEach(({ ctx }) => {
+      onCleanup(
+        ctx.data.on("session.renamed", (event) => {
+          ctx.data.session.invalidate(event.data.sessionID)
+          void ctx.data.session
+            .sync(event.data.sessionID)
+            .catch((error) => console.error("Failed to refresh renamed session", error))
+        }),
+      )
+    })
+  })
+
   // Root sessions in the current mode per project, newest first (the inbox order).
   const sessions = createMemo(() =>
     Map.groupBy(
       sidebar.inbox.entries().flatMap((entry) => {
-        const project = entry.ctx.projects.forSession(entry.session)
+        // Inbox recency ignores passive metadata changes; the project tree retains its last-update ordering.
+        const session = entry.ctx.data.session.get(entry.session.id) ?? entry.session
+        const project = entry.ctx.projects.forSession(session)
 
         if (!project || inboxArchived(entry) !== archived()) return []
 
-        return [{ key: projectKey(entry.server, project.worktree), project, entry }]
+        return [{ key: projectKey(entry.server, project.worktree), project, entry: { ...entry, session } }]
       }),
       (item) => item.key,
     ),

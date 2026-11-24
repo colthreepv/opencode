@@ -29,9 +29,17 @@ import { Persist, persisted } from "@/runtime/persistence/storage"
 import { SessionTabAvatarView } from "@/shell/layout/session-tab-avatar"
 import type { LocalProject } from "@/shell/state/layout"
 import { sessionTabTitle } from "./tab-title"
-import { sessionTitle } from "@/session/title"
+import { sessionLabel, sessionTitle } from "@/session/title"
+import { createSessionExporter } from "@/session/commands/export-session"
+import { SessionReadMenuItem } from "@/session/session-read-menu-item"
+import { RenameDialog } from "./project-session-row"
 import { createSessionInbox, inboxArchived, type InboxEntry, type InboxStatus } from "./inbox-model"
-import { compareWorking } from "./inbox-working"
+import { compareWorking, workingSince } from "./inbox-working"
+import { useGlobal } from "@/runtime/server/runtime"
+import { useLayout } from "@/shell/state/layout"
+import { tabKey, useTabs, type DraftTab } from "@/shell/tabs/tabs"
+import { createDraftComposerState } from "@/composer/state"
+import { isAttachment } from "@/composer/prompt-parts"
 
 const RECENT_LIMIT = 10
 
@@ -48,6 +56,11 @@ export function SidebarInbox() {
   const dialog = useDialog()
   const servers = useServers()
   const inbox = createSessionInbox({ archived: true })
+  const tabs = useTabs()
+  const layout = useLayout()
+  const global = useGlobal()
+
+  const exporter = createSessionExporter()
 
   const [state, setState, , ready] = persisted(Persist.global("sidebar.inbox"), InboxState, {
     workingExpanded: true,
@@ -56,16 +69,33 @@ export function SidebarInbox() {
 
   const [announcement, setAnnouncement] = createStore({ text: "" })
 
-  createEffect((previous: Map<string, InboxStatus> | undefined) => {
+  createEffect((previous: { underway: Map<string, number>; statuses: Map<string, InboxStatus> } | undefined) => {
     if (inbox.loading()) return
 
     const entries = inbox.entries()
 
+    // Runs the server's index shows as started at the first paint, keyed by their start. The running-session snapshot
+    // can land after that paint and move them into Working; they had already started, so they are not announced.
+    const underway =
+      previous?.underway ??
+      new Map(
+        entries.flatMap((entry) => {
+          const since = workingSince(entry.session)
+
+          return since === undefined ? [] : [[entry.key, since] as const]
+        }),
+      )
+
     if (previous) {
       const text = entries
         .flatMap((entry) => {
-          if (!previous.has(entry.key) || previous.get(entry.key) === entry.status || entry.status === "ready")
-            return []
+          const status = previous.statuses.get(entry.key)
+
+          if (status === undefined || status === entry.status || entry.status === "ready") return []
+
+          const since = workingSince(entry.session)
+
+          if (entry.status === "working" && since !== undefined && underway.get(entry.key) === since) return []
 
           return [
             language.t(`sidebar.inbox.announce.${entry.status}`, {
@@ -78,7 +108,7 @@ export function SidebarInbox() {
       if (text) setAnnouncement("text", text)
     }
 
-    return new Map(entries.map((entry) => [entry.key, entry.status]))
+    return { underway, statuses: new Map(entries.map((entry) => [entry.key, entry.status])) }
   })
 
   const sections = createMemo(() => {
@@ -117,6 +147,44 @@ export function SidebarInbox() {
       working,
     }
   })
+
+  // The inbox lists sessions, not tabs, so drafts get their own group: the open one and every other still holding
+  // something, newest first. Without it a draft left for a session can't be reached again.
+  const draftComposer = (tab: DraftTab) => tabs.state(tab, "prompt", () => createDraftComposerState(tab.draftID))
+
+  const draftText = (tab: DraftTab) =>
+    draftComposer(tab)
+      .current()
+      .flatMap((part) => (part.type === "text" ? [part.content] : []))
+      .join("")
+      .trim()
+
+  const draftSelected = (tab: DraftTab) => {
+    const route = layout.route()
+
+    return route.type === "draft" && route.draftID === tab.draftID
+  }
+
+  // The store's own tab objects, so typing in a draft doesn't remount its row.
+  const drafts = createMemo(() =>
+    tabs.store
+      .filter((tab): tab is DraftTab => {
+        if (tab.type !== "draft") return false
+
+        if (draftSelected(tab)) return true
+
+        const composer = draftComposer(tab)
+
+        return !!draftText(tab) || composer.current().some(isAttachment) || composer.context.items().length > 0
+      })
+      .toReversed(),
+  )
+
+  const discardDraft = (tab: DraftTab) => {
+    const index = tabs.store.findIndex((item) => tabKey(item) === tabKey(tab))
+
+    if (index !== -1) tabs.closeTab(index)
+  }
 
   const selectedWorking = createMemo(() => sections().working.find((entry) => inbox.selected(entry))?.key)
 
@@ -160,6 +228,32 @@ export function SidebarInbox() {
               branch={inbox.branch(entry())}
               worktree={inbox.inWorktree(entry())}
               archived={inboxArchived(entry())}
+              actions={
+                <>
+                  <Menu.Item
+                    onSelect={() => {
+                      const current = entry()
+
+                      void dialog.show(() => (
+                        <RenameDialog
+                          title={sessionLabel(current.session)}
+                          onRename={(title) => inbox.rename(current, title)}
+                        />
+                      ))
+                    }}
+                  >
+                    {language.t("common.rename")}
+                  </Menu.Item>
+                  <Menu.Item
+                    disabled={exporter.exporting({ server: entry().server, sessionID: entry().session.id })}
+                    onSelect={() => exporter.export({ server: entry().server, sessionID: entry().session.id })}
+                  >
+                    {language.t("common.export")}…
+                  </Menu.Item>
+                  <SessionReadMenuItem server={entry().server} session={entry().session} />
+                  <Menu.Separator />
+                </>
+              }
               onOpen={() => inbox.open(entry())}
               onArchive={() => void inbox.archive(entry())}
               onUnarchive={() => void inbox.unarchive(entry())}
@@ -179,6 +273,29 @@ export function SidebarInbox() {
 
   // Render slots inside InboxNavigation without recreating section objects on updates.
   const groups = [
+    {
+      id: "drafts",
+      get label() {
+        return language.t("sidebar.inbox.section.drafts")
+      },
+      get count() {
+        return drafts().length
+      },
+      rows: () => (
+        <For each={drafts()}>
+          {(tab) => (
+            <InboxDraftCard
+              project={global.serverCtx(tab.server)?.projects.forDirectory(tab.directory)}
+              directory={tab.directory}
+              title={draftText(tab).split("\n")[0]}
+              selected={draftSelected(tab)}
+              onOpen={() => tabs.select(tab)}
+              onDiscard={() => discardDraft(tab)}
+            />
+          )}
+        </For>
+      ),
+    },
     {
       id: "needs",
       get label() {
@@ -213,7 +330,7 @@ export function SidebarInbox() {
           <Button
             variant="ghost-muted"
             size="normal"
-            class="w-full justify-start px-2"
+            class="w-full justify-start px-2 focus-visible:-outline-offset-2"
             aria-expanded={state.recentExpanded}
             onClick={() => setState("recentExpanded", !state.recentExpanded)}
           >
@@ -338,6 +455,7 @@ export function InboxSessionList(props: {
       <div
         ref={container}
         data-slot="sidebar-inbox"
+        data-focus-scope
         aria-busy={props.loading}
         class="flex min-h-0 flex-1 flex-col"
         onFocusIn={(event) => {
@@ -427,7 +545,7 @@ export function InboxSessionList(props: {
                 <Button
                   variant="ghost-muted"
                   size="normal"
-                  class="w-full justify-start px-2"
+                  class="w-full justify-start px-2 focus-visible:-outline-offset-2"
                   onClick={props.onArchived}
                 >
                   {language.t("sidebar.inbox.section.archived")}
@@ -488,7 +606,6 @@ function SectionHeader(props: {
       <Show when={props.onToggle}>
         <Icon
           name="fill-triangle-down"
-          size="small"
           class="shrink-0 transition-transform"
           classList={{ "-rotate-90 rtl:rotate-90": !props.expanded }}
         />
@@ -513,13 +630,64 @@ function SectionHeader(props: {
           id={props.id}
           type="button"
           aria-expanded={props.expanded}
-          class="flex h-6 w-full shrink-0 items-center gap-1.5 rounded-[6px] px-2 text-start text-[13px] leading-4 font-medium text-v2-text-text-muted hover:text-v2-text-text-base focus-visible:outline-none focus-visible:bg-v2-overlay-simple-overlay-hover"
+          class="flex h-6 w-full shrink-0 items-center gap-1.5 rounded-[6px] px-2 text-start text-[13px] leading-4 font-medium text-v2-text-text-muted hover:text-v2-text-text-base focus-visible:-outline-offset-2"
           onClick={toggle()}
         >
           {content()}
         </button>
       )}
     </Show>
+  )
+}
+
+export function InboxDraftCard(props: {
+  project?: LocalProject
+  directory: string
+  title: string
+  selected: boolean
+  onOpen: () => void
+  onDiscard: () => void
+}) {
+  const language = useLanguage()
+  const navigation = useContext(InboxNavigation)
+  const id = createUniqueId()
+
+  return (
+    <Menu.Context modal={false}>
+      <Menu.Context.Trigger
+        as="button"
+        type="button"
+        id={id}
+        tabIndex={navigation ? (navigation() === id ? 0 : -1) : 0}
+        aria-current={props.selected ? "page" : undefined}
+        data-slot="sidebar-inbox-item"
+        data-state={props.selected ? "active" : undefined}
+        class="group flex h-[54px] w-full shrink-0 flex-col gap-1.5 rounded-[6px] p-2 text-start hover:bg-v2-overlay-simple-overlay-hover focus-visible:-outline-offset-2 data-[state=active]:bg-v2-overlay-simple-overlay-pressed"
+        onClick={props.onOpen}
+      >
+        <span class="flex h-4 w-full min-w-0 shrink-0 items-center gap-2">
+          <span class="flex size-4 shrink-0 items-center justify-center">
+            <SessionTabAvatarView project={props.project} directory={props.directory} unread={false} />
+          </span>
+          <span
+            dir="auto"
+            class="min-w-0 flex-1 truncate text-[13px] leading-4 font-medium tracking-[-0.04px] text-v2-text-text-base"
+          >
+            {props.title || language.t("command.session.new")}
+          </span>
+        </span>
+        <span class="flex h-4 w-full min-w-0 shrink-0 items-center ps-6 text-[13px] leading-4 tracking-[-0.04px] text-v2-text-text-muted">
+          <span dir="auto" class="min-w-0 truncate">
+            {displayName(props.project ?? { worktree: props.directory })}
+          </span>
+        </span>
+      </Menu.Context.Trigger>
+      <Menu.Context.Portal>
+        <Menu.Context.Content>
+          <Menu.Item onSelect={props.onDiscard}>{language.t("sidebar.inbox.discardDraft")}</Menu.Item>
+        </Menu.Context.Content>
+      </Menu.Context.Portal>
+    </Menu.Context>
   )
 }
 
@@ -539,6 +707,7 @@ export function InboxSessionCard(props: {
   onArchive: () => void
   onUnarchive: () => void
   onDelete: () => void
+  actions?: JSX.Element
 }) {
   const language = useLanguage()
   const navigation = useContext(InboxNavigation)
@@ -578,7 +747,7 @@ export function InboxSessionCard(props: {
         data-slot="sidebar-inbox-item"
         data-status={status()}
         data-state={props.selected ? "active" : undefined}
-        class="group flex h-[54px] w-full shrink-0 flex-col gap-1.5 rounded-[6px] p-2 text-start hover:bg-v2-overlay-simple-overlay-hover focus-visible:outline-none focus-visible:bg-v2-overlay-simple-overlay-hover data-[state=active]:bg-v2-overlay-simple-overlay-pressed"
+        class="group flex h-[54px] w-full shrink-0 flex-col gap-1.5 rounded-[6px] p-2 text-start hover:bg-v2-overlay-simple-overlay-hover focus-visible:-outline-offset-2 data-[state=active]:bg-v2-overlay-simple-overlay-pressed"
         classList={{
           "transition-opacity hover:opacity-100 focus-visible:opacity-100": !props.selected,
           "opacity-50": props.archived && !props.selected,
@@ -654,6 +823,7 @@ export function InboxSessionCard(props: {
       </Menu.Context.Trigger>
       <Menu.Context.Portal>
         <Menu.Context.Content>
+          {props.actions}
           <Show
             when={props.archived}
             fallback={<Menu.Item onSelect={props.onArchive}>{language.t("common.archive")}</Menu.Item>}
