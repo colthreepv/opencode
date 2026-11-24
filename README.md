@@ -59,7 +59,7 @@ current history and opens it without sending a prompt.
 ## Branch and builds
 
 [`sidebar-pro`](https://github.com/colthreepv/opencode/tree/sidebar-pro) is this fork's default branch,
-currently based on upstream **v2.2.6**. Accepted stable V2 releases are merged or rebased after compatibility review.
+currently based on upstream **v2.4.1**. Accepted stable V2 releases are merged or rebased after compatibility review.
 Official OpenCode downloads do **not** include this sidebar.
 
 Download the [latest Windows release](https://github.com/colthreepv/opencode/releases/latest) and read the
@@ -85,7 +85,7 @@ The fork build helper is Windows-specific; other platforms have not been validat
 - **Personal releases:** every push to `personal` builds a Windows x64 installer and Linux x64 AppImage/deb/rpm,
   then publishes `v<base>-personal.<build-number>` with checksums and a build manifest. Download the current packages
   from [the latest release](https://github.com/colthreepv/opencode/releases/latest). The workflow can also be started manually.
-- **Upstream compatibility:** a check every six hours watches stable **V2** releases, tries the sidebar branch on the new base
+- **Upstream compatibility:** a manual check probes stable **V2** releases, tries the sidebar branch on the new base
   in a disposable runner, and reports conflicts or check results in one issue per release. It never pushes an update
   or modifies the maintained branch. You can also run it manually from the Actions tab.
 - **Windows builds:** the manual **Sidebar Pro Windows desktop** workflow downloads the official CLI for the declared base,

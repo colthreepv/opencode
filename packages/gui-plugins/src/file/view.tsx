@@ -13,9 +13,9 @@ import { IconButton } from "@opencode/ui/icon-button"
 import { Tooltip } from "@opencode/ui/tooltip"
 import type File from "./index"
 import { createKeyed, usePlugin, type LineRange, type MountedSession, type SessionScreen } from "@opencode/plugin/gui"
-import { artifactKind } from "@opencode/util/artifact"
 import ArtifactView from "./artifact-view"
 import { useShared } from "./context"
+import { createPreviewFind, PreviewFindBar } from "./find"
 import { fileTabPath } from "./path"
 import {
   FILE_SCROLL_INTERACTED,
@@ -48,6 +48,8 @@ function selectionFromLines(range: LineRange): FileSelection {
 
 const selectionSide = (range: LineRange) => range.endSide ?? range.side ?? "additions"
 
+const sendLabels = { send: "comment.send", steer: "comment.steer", queue: "comment.queue" } as const
+
 function FileCommentMenu(props: {
   moreLabel: string
   editLabel: string
@@ -75,7 +77,7 @@ function FileCommentMenu(props: {
 /** The code view's scroll element and the animation frame that restores or stores its scroll. */
 type ScrollTarget = { element?: HTMLDivElement; frame?: number }
 
-type FindState = { find: FileSearchHandle | null }
+type FindState = { find: FileSearchHandle | null; root?: HTMLDivElement }
 
 /** The session the view shows and the one it showed before a switch, whose unsaved scroll a switch still stores. */
 type ShownSessions = { current: MountedSession; previous?: MountedSession }
@@ -290,6 +292,7 @@ function createScrollSync(input: {
 
 export function SessionFileView(props: { session: MountedSession; screen: SessionScreen; id: string }) {
   const ctx = usePlugin<typeof File>()
+  const mac = /(Mac|iPhone|iPad)/.test(navigator.platform)
   const layout = ctx.layout
   const shared = useShared()
   const fileComponent = useFileComponent()
@@ -320,13 +323,6 @@ export function SessionFileView(props: { session: MountedSession; screen: Sessio
 
   const contents = createMemo(() => current()?.content?.content ?? "")
   const cacheKey = createMemo(() => sampledChecksum(contents()))
-
-  // Plain text keeps the code view; every other kind is rendered by ArtifactView.
-  const artifact = createMemo(() => {
-    const content = current()?.content
-
-    return content?.type === "binary" || artifactKind(path() ?? "") !== "text"
-  })
 
   const selectedLines = createMemo<LineRange | null>(() => {
     const p = path()
@@ -390,6 +386,7 @@ export function SessionFileView(props: { session: MountedSession; screen: Sessio
     comment: string
     preview?: string
     origin?: "review" | "file"
+    send?: boolean
   }) => {
     const selection = selectionFromLines(input.selection)
     const preview = input.preview ?? buildPreview(input.file, input.selection)
@@ -409,13 +406,23 @@ export function SessionFileView(props: { session: MountedSession; screen: Sessio
       commentOrigin: input.origin,
       preview,
     })
+
+    if (input.send) composer.send(saved.id)
   }
 
-  const updateCommentInContext = (input: { id: string; file: string; selection: LineRange; comment: string }) => {
+  const updateCommentInContext = (input: {
+    id: string
+    file: string
+    selection: LineRange
+    comment: string
+    send?: boolean
+  }) => {
     comment.update(input.id, input.comment)
     const preview = input.file === path() ? buildPreview(input.file, input.selection) : undefined
     // The composer keeps a chip's preview unless the update names a new one.
     composer.update(input.id, preview ? { comment: input.comment, preview } : { comment: input.comment })
+
+    if (input.send) composer.send(input.id)
   }
 
   const removeCommentFromContext = (input: { id: string; file: string }) => {
@@ -447,17 +454,26 @@ export function SessionFileView(props: { session: MountedSession; screen: Sessio
       if (!p) return
       file.selection.set(p, range)
     },
-    onSubmit: ({ comment, selection }) => {
+    onSubmit: ({ comment, selection, send }) => {
       const p = path()
 
       if (!p) return
-      addCommentToContext({ file: p, selection, comment, origin: "file" })
+      addCommentToContext({ file: p, selection, comment, origin: "file", send })
     },
-    onUpdate: ({ id, comment, selection }) => {
+    onUpdate: ({ id, comment, selection, send }) => {
       const p = path()
 
       if (!p) return
-      updateCommentInContext({ id, file: p, selection, comment })
+      updateCommentInContext({ id, file: p, selection, comment, send })
+    },
+    send: () => {
+      const delivery = composer.delivery()
+
+      return {
+        label: ctx.t(sendLabels[delivery ?? "send"]),
+        keys: [mac ? "⌘" : ctx.t("common.key.ctrl"), "⏎"],
+        disabled: delivery === undefined,
+      }
     },
     onDelete: (comment) => {
       const p = path()
@@ -477,7 +493,9 @@ export function SessionFileView(props: { session: MountedSession; screen: Sessio
     ),
   })
 
-  // Mod+F finds in the shown file.
+  const previewFind = createPreviewFind({ root: () => state.root, active })
+
+  // Mod+F finds in the shown file, or in its preview.
   makeEventListener(
     window,
     "keydown",
@@ -490,6 +508,8 @@ export function SessionFileView(props: { session: MountedSession; screen: Sessio
 
       event.preventDefault()
       event.stopPropagation()
+
+      if (previewFind.open()) return
       // Find scrolls to its matches; the stored scroll must not pull the view back.
       scrollSync.interacted()
       state.find?.focus()
@@ -557,6 +577,7 @@ export function SessionFileView(props: { session: MountedSession; screen: Sessio
             annotations={commentsUi.annotations()}
             renderAnnotation={commentsUi.renderAnnotation}
             renderGutterUtility={commentsUi.renderGutterUtility}
+            onCommentSelection={commentsUi.commentSelection()}
             onLineSelected={(range: LineRange | null) => {
               commentsUi.onLineSelected(range)
             }}
@@ -608,20 +629,19 @@ export function SessionFileView(props: { session: MountedSession; screen: Sessio
   )
 
   return (
-    <div class="relative h-full min-h-0 flex flex-col" classList={{ "mt-3": !artifact() }}>
+    <div ref={(el) => (state.root = el)} class="relative h-full min-h-0 flex flex-col">
+      <PreviewFindBar find={previewFind} />
       <Switch>
         <Match when={current()?.loaded ? current()?.content : undefined}>
           {(value) => (
-            <Show when={artifact()} fallback={codeView()}>
-              <ArtifactView
-                session={props.session}
-                screen={props.screen}
-                path={path() ?? ""}
-                content={value()}
-                cacheKey={cacheKey()}
-                source={codeView()}
-              />
-            </Show>
+            <ArtifactView
+              session={props.session}
+              screen={props.screen}
+              path={path() ?? ""}
+              content={value()}
+              cacheKey={cacheKey()}
+              source={codeView()}
+            />
           )}
         </Match>
         <Match when={current()?.loading}>

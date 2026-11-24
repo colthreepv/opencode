@@ -6,20 +6,20 @@ Agent instructions for the `personal` integration branch. This file belongs only
 ## Base
 
 - Repository: `colthreepv/opencode`.
-- Sidebar base: `sidebar-pro`, based on official OpenCode `v2.2.6` (`dc2ffcf8bf`), including the local
+- Sidebar base: `sidebar-pro`, based on official OpenCode `v2.4.1` (`6f0514052a`), including the local
   `stable-conversations` feature.
 - Never integrate `upstream/dev` wholesale. Advance the sidebar base only to an accepted stable V2 release.
 
 ## Patch queue
 
-Upstream status checked on 2026-11-07. An open or rejected PR does not prevent using its patch here.
+Upstream status checked on 2026-11-24. An open or rejected PR does not prevent using its patch here.
 
-| Patch | Integration status | Upstream PR | Reference branch | Source commits |
-| --- | --- | --- | --- | --- |
-| Independent external-editor launches; report launch errors instead of falling back to Explorer | Included | [#62542](https://github.com/anomalyco/opencode/pull/62542), open | `origin/detach-editor` | `94adf06657`, `9faf3329f0` |
-| File links navigate to and center the requested line; file-viewer word wrap control and icon | Included | [#62543](https://github.com/anomalyco/opencode/pull/62543), open | `origin/fix/go-to-codeline` | `dcc5b7c796`, `7c0954e04a` |
+| Patch                                                                                          | Integration status | Upstream PR                                                      | Reference branch            | Source commits             |
+| ---------------------------------------------------------------------------------------------- | ------------------ | ---------------------------------------------------------------- | --------------------------- | -------------------------- |
+| Independent external-editor launches; report launch errors instead of falling back to Explorer | Included           | [#62542](https://github.com/anomalyco/opencode/pull/62542), open | `origin/detach-editor`      | `94adf06657`, `9faf3329f0` |
+| File links navigate to and center the requested line; file-viewer word wrap control and icon   | Included           | [#62543](https://github.com/anomalyco/opencode/pull/62543), open | `origin/fix/go-to-codeline` | `dcc5b7c796`, `7c0954e04a` |
 
-The listed source commits were cherry-picked in order onto v2.2.6 without merging their development bases. Prefer
+The listed source commits were originally cherry-picked onto v2.2.6 without merging their development bases, then retained and adapted while merging the accepted v2.4.1 sidebar base. Prefer
 scoped cherry-picks when a development base would add unrelated changes. Feature branch merges are allowed after
 reviewing their net changes and testing the result.
 
